@@ -26,7 +26,7 @@ import PrintView from '@/components/PrintView';
 import UserManagement from '@/components/UserManagement';
 import Settings from '@/components/Settings';
 
-import { Vendor, Item, ComparisonRow, ComparisonHistory as ComparisonHistoryType, AttachmentFile, AppSettings } from '@/lib/types';
+import { Vendor, Item, ComparisonRow, AppSettings } from '@/lib/types';
 import { authService } from '@/lib/auth';
 import { vendorsAPI, itemsAPI } from '@/lib/api';
 import type { User } from '@/lib/types';
@@ -36,14 +36,11 @@ export default function Index() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('comparison');
   const [initialized, setInitialized] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   // Data states
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [rows, setRows] = useState<ComparisonRow[]>([]);
-  const [history, setHistory] = useState<ComparisonHistoryType[]>([]);
-  const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [generalComments, setGeneralComments] = useState('');
 
   const [settings, setSettings] = useState<AppSettings>({
@@ -63,7 +60,6 @@ export default function Index() {
 
   // Load data from database
   const loadDataFromDatabase = async () => {
-    setLoading(true);
     try {
       const [vendorsData, itemsData] = await Promise.all([
         vendorsAPI.getAll(),
@@ -77,8 +73,6 @@ export default function Index() {
       // For now, initialize with empty arrays
     } catch (error) {
       console.error('Failed to load data from database:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

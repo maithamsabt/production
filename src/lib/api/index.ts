@@ -7,6 +7,4 @@ export { itemsAPI } from './items';
 export { settingsAPI } from './settings';
 export type { LoginResponse, SessionResponse } from './auth';
 export type { CreateUserRequest, UpdateUserRequest } from './users';
-export type { Vendor } from './vendors';
-export type { Item } from './items';
 export type { Settings } from './settings';

@@ -29,7 +29,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
 
   // Load items from database on mount
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       const createdItem = await itemsAPI.create({
         ...newItem,
@@ -69,7 +69,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
     } catch (error: any) {
       toast.error(error.message || 'Failed to add item');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -81,7 +81,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
   const saveEdit = async () => {
     if (!editingItem) return;
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       const updatedItem = await itemsAPI.update(editingId!, {
         name: editingItem.name,
@@ -100,7 +100,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
     } catch (error: any) {
       toast.error(error.message || 'Failed to update item');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -112,7 +112,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
   const deleteItem = async (id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       await itemsAPI.delete(id);
       onItemsChange(items.filter(item => item.id !== id));
@@ -120,7 +120,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete item');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -128,7 +128,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
     const item = items.find(i => i.id === id);
     if (!item) return;
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       const updatedItem = await itemsAPI.update(id, { isActive: !item.isActive });
       onItemsChange(items.map(i => 
@@ -138,7 +138,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
     } catch (error: any) {
       toast.error(error.message || 'Failed to update item status');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 

@@ -27,7 +27,7 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
 
   // Load vendors from database on mount
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       const createdVendor = await vendorsAPI.create({
         ...newVendor,
@@ -68,7 +68,7 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
     } catch (error: any) {
       toast.error(error.message || 'Failed to add vendor');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -80,7 +80,7 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
   const saveEdit = async () => {
     if (!editingVendor) return;
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       const updatedVendor = await vendorsAPI.update(editingId!, {
         name: editingVendor.name,
@@ -100,7 +100,7 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
     } catch (error: any) {
       toast.error(error.message || 'Failed to update vendor');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -112,7 +112,7 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
   const deleteVendor = async (id: string) => {
     if (!confirm('Are you sure you want to delete this vendor?')) return;
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       await vendorsAPI.delete(id);
       onVendorsChange(vendors.filter(vendor => vendor.id !== id));
@@ -120,7 +120,7 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete vendor');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -128,7 +128,7 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
     const vendor = vendors.find(v => v.id === id);
     if (!vendor) return;
 
-    setLoading(true);
+    setIsLoading(true);
     try {
       const updatedVendor = await vendorsAPI.update(id, { isActive: !vendor.isActive });
       onVendorsChange(vendors.map(v => 
@@ -138,7 +138,7 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
     } catch (error: any) {
       toast.error(error.message || 'Failed to update vendor status');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 

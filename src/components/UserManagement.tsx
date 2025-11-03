@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Users, Edit, Trash2, Save, X, AlertCircle, Power, PowerOff } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import type { User } from '@/lib/types';
-import { getPermissions, getRoleBadgeVariant, getRoleDescription } from '@/lib/permissions';
+import { getPermissions, getRoleBadgeVariant } from '@/lib/permissions';
 import { toast } from 'sonner';
 
 interface UserManagementProps {
