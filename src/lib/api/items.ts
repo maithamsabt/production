@@ -1,11 +1,5 @@
 import { apiClient } from './client';
-
-export interface Item {
-  id: string;
-  name: string;
-  description?: string | null;
-  unit?: string | null;
-}
+import type { Item } from '../types';
 
 class ItemsAPI {
   async getAll(): Promise<Item[]> {
@@ -16,11 +10,11 @@ class ItemsAPI {
     return apiClient.get<Item>(`/items/${id}`);
   }
 
-  async create(data: Omit<Item, 'id'>): Promise<Item> {
+  async create(data: Omit<Item, 'id' | 'createdAt'>): Promise<Item> {
     return apiClient.post<Item>('/items', data);
   }
 
-  async update(id: string, data: Partial<Omit<Item, 'id'>>): Promise<Item> {
+  async update(id: string, data: Partial<Omit<Item, 'id' | 'createdAt'>>): Promise<Item> {
     return apiClient.put<Item>(`/items/${id}`, data);
   }
 
@@ -30,3 +24,4 @@ class ItemsAPI {
 }
 
 export const itemsAPI = new ItemsAPI();
+

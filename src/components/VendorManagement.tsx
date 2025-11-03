@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Building, Edit, Trash2, Save, X } from 'lucide-react';
 import { Vendor } from '@/lib/types';
+import { vendorsAPI } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface VendorManagementProps {
   vendors: Vendor[];
@@ -25,26 +27,49 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const addVendor = () => {
-    if (!newVendor.name.trim()) return;
+  // Load vendors from database on mount
+  useEffect(() => {
+    loadVendors();
+  }, []);
 
-    const vendor: Vendor = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...newVendor,
-      isActive: true,
-      createdAt: new Date().toISOString()
-    };
+  const loadVendors = async () => {
+    try {
+      const data = await vendorsAPI.getAll();
+      onVendorsChange(data);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load vendors');
+    }
+  };
 
-    onVendorsChange([...vendors, vendor]);
-    setNewVendor({
-      name: '',
-      contactPerson: '',
-      email: '',
-      phone: '',
-      address: '',
-      vat: 0
-    });
+  const addVendor = async () => {
+    if (!newVendor.name.trim()) {
+      toast.error('Vendor name is required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const createdVendor = await vendorsAPI.create({
+        ...newVendor,
+        isActive: true,
+      });
+      onVendorsChange([...vendors, createdVendor]);
+      setNewVendor({
+        name: '',
+        contactPerson: '',
+        email: '',
+        phone: '',
+        address: '',
+        vat: 0
+      });
+      toast.success('Vendor added successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add vendor');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const startEdit = (vendor: Vendor) => {
@@ -52,14 +77,31 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
     setEditingVendor({ ...vendor });
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingVendor) return;
 
-    onVendorsChange(vendors.map(vendor => 
-      vendor.id === editingId ? editingVendor : vendor
-    ));
-    setEditingId(null);
-    setEditingVendor(null);
+    setLoading(true);
+    try {
+      const updatedVendor = await vendorsAPI.update(editingId!, {
+        name: editingVendor.name,
+        contactPerson: editingVendor.contactPerson,
+        email: editingVendor.email,
+        phone: editingVendor.phone,
+        address: editingVendor.address,
+        vat: editingVendor.vat,
+        isActive: editingVendor.isActive,
+      });
+      onVendorsChange(vendors.map(vendor => 
+        vendor.id === editingId ? updatedVendor : vendor
+      ));
+      setEditingId(null);
+      setEditingVendor(null);
+      toast.success('Vendor updated successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update vendor');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cancelEdit = () => {
@@ -67,14 +109,37 @@ export default function VendorManagement({ vendors, onVendorsChange }: VendorMan
     setEditingVendor(null);
   };
 
-  const deleteVendor = (id: string) => {
-    onVendorsChange(vendors.filter(vendor => vendor.id !== id));
+  const deleteVendor = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this vendor?')) return;
+
+    setLoading(true);
+    try {
+      await vendorsAPI.delete(id);
+      onVendorsChange(vendors.filter(vendor => vendor.id !== id));
+      toast.success('Vendor deleted successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete vendor');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleVendorStatus = (id: string) => {
-    onVendorsChange(vendors.map(vendor => 
-      vendor.id === id ? { ...vendor, isActive: !vendor.isActive } : vendor
-    ));
+  const toggleVendorStatus = async (id: string) => {
+    const vendor = vendors.find(v => v.id === id);
+    if (!vendor) return;
+
+    setLoading(true);
+    try {
+      const updatedVendor = await vendorsAPI.update(id, { isActive: !vendor.isActive });
+      onVendorsChange(vendors.map(v => 
+        v.id === id ? updatedVendor : v
+      ));
+      toast.success(`Vendor ${updatedVendor.isActive ? 'activated' : 'deactivated'} successfully`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update vendor status');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

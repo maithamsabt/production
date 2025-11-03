@@ -28,6 +28,7 @@ import Settings from '@/components/Settings';
 
 import { Vendor, Item, ComparisonRow, ComparisonHistory as ComparisonHistoryType, AttachmentFile, AppSettings } from '@/lib/types';
 import { authService } from '@/lib/auth';
+import { vendorsAPI, itemsAPI } from '@/lib/api';
 import type { User } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
 
@@ -35,14 +36,10 @@ export default function Index() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('comparison');
   const [initialized, setInitialized] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Data states
-  const [vendors, setVendors] = useState<Vendor[]>([
-    { id: '1', name: 'Vendor A', contactPerson: 'John Doe', email: 'john@vendora.com', phone: '123-456-7890', address: '123 Main St', vat: 10, isActive: true, createdAt: '2024-01-01' },
-    { id: '2', name: 'Vendor B', contactPerson: 'Jane Smith', email: 'jane@vendorb.com', phone: '098-765-4321', address: '456 Oak Ave', vat: 12, isActive: true, createdAt: '2024-01-01' },
-    { id: '3', name: 'Vendor C', contactPerson: 'Bob Johnson', email: 'bob@vendorc.com', phone: '555-123-4567', address: '789 Pine Rd', vat: 15, isActive: true, createdAt: '2024-01-01' }
-  ]);
-
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [rows, setRows] = useState<ComparisonRow[]>([]);
   const [history, setHistory] = useState<ComparisonHistoryType[]>([]);
@@ -64,14 +61,37 @@ export default function Index() {
     requestNumber: ''
   });
 
-  // Initialize auth service on first mount
+  // Load data from database
+  const loadDataFromDatabase = async () => {
+    setLoading(true);
+    try {
+      const [vendorsData, itemsData] = await Promise.all([
+        vendorsAPI.getAll(),
+        itemsAPI.getAll(),
+      ]);
+      
+      setVendors(vendorsData);
+      setItems(itemsData);
+      
+      // TODO: Load comparisons, history, attachments, and settings from database
+      // For now, initialize with empty arrays
+    } catch (error) {
+      console.error('Failed to load data from database:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initialize auth service and load data on first mount
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Check if user is already logged in
-        const user = authService.getCurrentUser();
+        // Check if user is already logged in via cookie
+        const user = await authService.getCurrentUser();
         if (user) {
           setCurrentUser(user);
+          // Load data after successful authentication
+          await loadDataFromDatabase();
         }
         
         setInitialized(true);
@@ -84,65 +104,11 @@ export default function Index() {
     initializeAuth();
   }, []);
 
-  // Load data from localStorage on mount
-  useEffect(() => {
-    if (!initialized) return;
-
-    const savedVendors = localStorage.getItem('vendors');
-    const savedItems = localStorage.getItem('items');
-    const savedRows = localStorage.getItem('rows');
-    const savedHistory = localStorage.getItem('history');
-    const savedAttachments = localStorage.getItem('attachments');
-    const savedSettings = localStorage.getItem('settings');
-    const savedGeneralComments = localStorage.getItem('generalComments');
-
-    if (savedVendors) setVendors(JSON.parse(savedVendors));
-    if (savedItems) setItems(JSON.parse(savedItems));
-    if (savedRows) setRows(JSON.parse(savedRows));
-    if (savedHistory) setHistory(JSON.parse(savedHistory));
-    if (savedAttachments) setAttachments(JSON.parse(savedAttachments));
-    if (savedSettings) setSettings(JSON.parse(savedSettings));
-    if (savedGeneralComments) setGeneralComments(savedGeneralComments);
-  }, [initialized]);
-
-  // Save data to localStorage whenever state changes
-  useEffect(() => {
-    if (!initialized) return;
-    localStorage.setItem('vendors', JSON.stringify(vendors));
-  }, [vendors, initialized]);
-
-  useEffect(() => {
-    if (!initialized) return;
-    localStorage.setItem('items', JSON.stringify(items));
-  }, [items, initialized]);
-
-  useEffect(() => {
-    if (!initialized) return;
-    localStorage.setItem('rows', JSON.stringify(rows));
-  }, [rows, initialized]);
-
-  useEffect(() => {
-    if (!initialized) return;
-    localStorage.setItem('history', JSON.stringify(history));
-  }, [history, initialized]);
-
-  useEffect(() => {
-    if (!initialized) return;
-    localStorage.setItem('attachments', JSON.stringify(attachments));
-  }, [attachments, initialized]);
-
-  useEffect(() => {
-    if (!initialized) return;
-    localStorage.setItem('settings', JSON.stringify(settings));
-  }, [settings, initialized]);
-
-  useEffect(() => {
-    if (!initialized) return;
-    localStorage.setItem('generalComments', generalComments);
-  }, [generalComments, initialized]);
-
-  const handleLogin = (user: User) => {
+  const handleLogin = async (user: User) => {
     setCurrentUser(user);
+    
+    // Load data from database after login
+    await loadDataFromDatabase();
     
     // Auto-populate settings with current user info
     setSettings(prev => ({
@@ -154,17 +120,9 @@ export default function Index() {
     }));
   };
 
-  const handleLogout = () => {
-    authService.logout();
+  const handleLogout = async () => {
+    await authService.logout();
     setCurrentUser(null);
-  };
-
-  const handleUserUpdate = () => {
-    // Refresh current user data in case they updated their own profile
-    const updatedUser = authService.getCurrentUser();
-    if (updatedUser) {
-      setCurrentUser(updatedUser);
-    }
   };
 
   if (!initialized) {
@@ -308,7 +266,6 @@ export default function Index() {
             <TabsContent value="users" className="space-y-6">
               <UserManagement
                 currentUser={currentUser}
-                onUserUpdate={handleUserUpdate}
               />
             </TabsContent>
           )}

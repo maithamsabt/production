@@ -64,6 +64,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
+    // Set HTTP-only cookie
+    res.setHeader('Set-Cookie', `token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`);
+
     // Return user data (without password)
     const { passwordHash, ...userData } = user;
     res.status(200).json({ user: userData, token });

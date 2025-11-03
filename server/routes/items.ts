@@ -41,16 +41,19 @@ router.get('/:id', authenticate, async (req, res) => {
 // Create item
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { name, description, unit } = req.body;
+    const { name, description, specification, unit, category, isActive } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ error: 'Item name is required' });
+    if (!name || !description || !specification || !unit || !category) {
+      return res.status(400).json({ error: 'All required fields must be provided' });
     }
 
     const [newItem] = await db.insert(items).values({
       name,
       description,
+      specification,
       unit,
+      category,
+      isActive: isActive !== undefined ? isActive : true,
     }).returning();
 
     res.status(201).json(newItem);
@@ -63,10 +66,18 @@ router.post('/', authenticate, async (req, res) => {
 // Update item
 router.put('/:id', authenticate, async (req, res) => {
   try {
-    const { name, description, unit } = req.body;
+    const { name, description, specification, unit, category, isActive } = req.body;
+
+    const updates: any = {};
+    if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
+    if (specification !== undefined) updates.specification = specification;
+    if (unit !== undefined) updates.unit = unit;
+    if (category !== undefined) updates.category = category;
+    if (isActive !== undefined) updates.isActive = isActive;
 
     const [updatedItem] = await db.update(items)
-      .set({ name, description, unit })
+      .set(updates)
       .where(eq(items.id, req.params.id))
       .returning();
 

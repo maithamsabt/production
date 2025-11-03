@@ -39,10 +39,24 @@ class AuthService {
   }
 
   /**
-   * Get current user
+   * Get current user from session
    */
-  getCurrentUser(): User | null {
-    return this.currentUser;
+  async getCurrentUser(): Promise<User | null> {
+    // If we have cached user, return it
+    if (this.currentUser) {
+      return this.currentUser;
+    }
+
+    // Otherwise, fetch from server
+    try {
+      const user = await authAPI.getCurrentUser();
+      this.currentUser = user;
+      this.notifyListeners();
+      return user;
+    } catch (error) {
+      this.currentUser = null;
+      return null;
+    }
   }
 
   /**

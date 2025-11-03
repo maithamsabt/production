@@ -3,12 +3,13 @@
  * Handles role-based access control with hierarchy: admin > checker > maker
  */
 
-import { AuthUser } from './auth';
+import type { User } from './types';
 
 export type Role = 'maker' | 'checker' | 'admin';
 
 export interface Permission {
   canViewUsers: boolean;
+  canManageUsers: boolean;
   canCreateUser: boolean;
   canEditUser: (targetUserId: string) => boolean;
   canDeleteUser: (targetUserId: string) => boolean;
@@ -60,12 +61,13 @@ export function hasHigherRole(userRole: Role, targetRole: Role): boolean {
 /**
  * Get permissions for a user
  */
-export function getPermissions(user: AuthUser, allUsers?: AuthUser[]): Permission {
+export function getPermissions(user: User, allUsers?: User[]): Permission {
   const role = user.role;
 
   return {
     // User management permissions
     canViewUsers: role === 'admin' || role === 'checker',
+    canManageUsers: role === 'admin' || role === 'checker',
     
     canCreateUser: role === 'admin' || role === 'checker',
     
@@ -135,7 +137,7 @@ export function getPermissions(user: AuthUser, allUsers?: AuthUser[]): Permissio
  * Check if user can perform a specific action
  */
 export function canPerformAction(
-  user: AuthUser,
+  user: User,
   action: keyof Permission,
   param?: string | Role
 ): boolean {

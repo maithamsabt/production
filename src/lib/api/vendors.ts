@@ -1,10 +1,5 @@
 import { apiClient } from './client';
-
-export interface Vendor {
-  id: string;
-  name: string;
-  contactInfo?: string | null;
-}
+import type { Vendor } from '../types';
 
 class VendorsAPI {
   async getAll(): Promise<Vendor[]> {
@@ -15,11 +10,11 @@ class VendorsAPI {
     return apiClient.get<Vendor>(`/vendors/${id}`);
   }
 
-  async create(data: Omit<Vendor, 'id'>): Promise<Vendor> {
+  async create(data: Omit<Vendor, 'id' | 'createdAt'>): Promise<Vendor> {
     return apiClient.post<Vendor>('/vendors', data);
   }
 
-  async update(id: string, data: Partial<Omit<Vendor, 'id'>>): Promise<Vendor> {
+  async update(id: string, data: Partial<Omit<Vendor, 'id' | 'createdAt'>>): Promise<Vendor> {
     return apiClient.put<Vendor>(`/vendors/${id}`, data);
   }
 
@@ -29,3 +24,4 @@ class VendorsAPI {
 }
 
 export const vendorsAPI = new VendorsAPI();
+

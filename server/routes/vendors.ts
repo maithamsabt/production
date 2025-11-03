@@ -41,15 +41,20 @@ router.get('/:id', authenticate, async (req, res) => {
 // Create vendor
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { name, contactInfo } = req.body;
+    const { name, contactPerson, email, phone, address, vat, isActive } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ error: 'Vendor name is required' });
+    if (!name || !contactPerson || !email || !phone || !address) {
+      return res.status(400).json({ error: 'All required fields must be provided' });
     }
 
     const [newVendor] = await db.insert(vendors).values({
       name,
-      contactInfo,
+      contactPerson,
+      email,
+      phone,
+      address,
+      vat: vat || 0,
+      isActive: isActive !== undefined ? isActive : true,
     }).returning();
 
     res.status(201).json(newVendor);
@@ -62,10 +67,19 @@ router.post('/', authenticate, async (req, res) => {
 // Update vendor
 router.put('/:id', authenticate, async (req, res) => {
   try {
-    const { name, contactInfo } = req.body;
+    const { name, contactPerson, email, phone, address, vat, isActive } = req.body;
+
+    const updates: any = {};
+    if (name !== undefined) updates.name = name;
+    if (contactPerson !== undefined) updates.contactPerson = contactPerson;
+    if (email !== undefined) updates.email = email;
+    if (phone !== undefined) updates.phone = phone;
+    if (address !== undefined) updates.address = address;
+    if (vat !== undefined) updates.vat = vat;
+    if (isActive !== undefined) updates.isActive = isActive;
 
     const [updatedVendor] = await db.update(vendors)
-      .set({ name, contactInfo })
+      .set(updates)
       .where(eq(vendors.id, req.params.id))
       .returning();
 

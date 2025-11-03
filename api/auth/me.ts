@@ -6,6 +6,16 @@ import { eq } from 'drizzle-orm';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
+function parseCookies(cookieHeader: string): Record<string, string> {
+  return cookieHeader.split(';').reduce((acc, cookie) => {
+    const [key, value] = cookie.trim().split('=');
+    if (key && value) {
+      acc[key] = decodeURIComponent(value);
+    }
+    return acc;
+  }, {} as Record<string, string>);
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -22,8 +32,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace('Bearer ', '');
+    // Try to get token from cookie first, then Authorization header
+    let token: string | undefined;
+    
+    if (req.headers.cookie) {
+      const cookies = parseCookies(req.headers.cookie);
+      token = cookies.token;
+    }
+    
+    // Fallback to Authorization header
+    if (!token && req.headers.authorization) {
+      token = req.headers.authorization.replace('Bearer ', '');
+    }
 
     if (!token) {
       return res.status(401).json({ error: 'Authentication required' });

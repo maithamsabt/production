@@ -17,15 +17,13 @@ class AuthAPI {
       password,
     });
     
-    // Store token
-    apiClient.setToken(response.token);
-    
+    // Cookie is automatically set by the server
     return response.user;
   }
 
   async logout(): Promise<void> {
     await apiClient.post('/auth/logout');
-    apiClient.setToken(null);
+    // Cookie is automatically cleared by the server
   }
 
   async getCurrentUser(): Promise<User | null> {
@@ -33,7 +31,6 @@ class AuthAPI {
       const response = await apiClient.get<SessionResponse>('/auth/me');
       return response.user;
     } catch (error) {
-      apiClient.setToken(null);
       return null;
     }
   }
@@ -43,7 +40,6 @@ class AuthAPI {
       await apiClient.get('/auth/verify');
       return true;
     } catch (error) {
-      apiClient.setToken(null);
       return false;
     }
   }

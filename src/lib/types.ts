@@ -1,6 +1,16 @@
-// Re-export AuthUser as User for backward compatibility
-import type { AuthUser } from './auth';
-export type User = AuthUser;
+// User type definition
+export interface User {
+  id: string;
+  username: string;
+  role: 'maker' | 'checker' | 'admin';
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin?: string;
+}
+
+// Export as AuthUser for backwards compatibility
+export type AuthUser = User;
 
 export interface Vendor {
   id: string;

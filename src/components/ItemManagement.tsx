@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { Item, UOMType } from '@/lib/types';
+import { itemsAPI } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface ItemManagementProps {
   items: Item[];
@@ -27,25 +29,48 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const addItem = () => {
-    if (!newItem.name.trim()) return;
+  // Load items from database on mount
+  useEffect(() => {
+    loadItems();
+  }, []);
 
-    const item: Item = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...newItem,
-      isActive: true,
-      createdAt: new Date().toISOString()
-    };
+  const loadItems = async () => {
+    try {
+      const data = await itemsAPI.getAll();
+      onItemsChange(data);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load items');
+    }
+  };
 
-    onItemsChange([...items, item]);
-    setNewItem({
-      name: '',
-      description: '',
-      specification: '',
-      unit: 'NOS',
-      category: ''
-    });
+  const addItem = async () => {
+    if (!newItem.name.trim()) {
+      toast.error('Item name is required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const createdItem = await itemsAPI.create({
+        ...newItem,
+        isActive: true,
+      });
+      onItemsChange([...items, createdItem]);
+      setNewItem({
+        name: '',
+        description: '',
+        specification: '',
+        unit: 'NOS',
+        category: ''
+      });
+      toast.success('Item added successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add item');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const startEdit = (item: Item) => {
@@ -53,14 +78,30 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
     setEditingItem({ ...item });
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingItem) return;
 
-    onItemsChange(items.map(item => 
-      item.id === editingId ? editingItem : item
-    ));
-    setEditingId(null);
-    setEditingItem(null);
+    setLoading(true);
+    try {
+      const updatedItem = await itemsAPI.update(editingId!, {
+        name: editingItem.name,
+        description: editingItem.description,
+        specification: editingItem.specification,
+        unit: editingItem.unit,
+        category: editingItem.category,
+        isActive: editingItem.isActive,
+      });
+      onItemsChange(items.map(item => 
+        item.id === editingId ? updatedItem : item
+      ));
+      setEditingId(null);
+      setEditingItem(null);
+      toast.success('Item updated successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update item');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cancelEdit = () => {
@@ -68,14 +109,37 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
     setEditingItem(null);
   };
 
-  const deleteItem = (id: string) => {
-    onItemsChange(items.filter(item => item.id !== id));
+  const deleteItem = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+
+    setLoading(true);
+    try {
+      await itemsAPI.delete(id);
+      onItemsChange(items.filter(item => item.id !== id));
+      toast.success('Item deleted successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete item');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleItemStatus = (id: string) => {
-    onItemsChange(items.map(item => 
-      item.id === id ? { ...item, isActive: !item.isActive } : item
-    ));
+  const toggleItemStatus = async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    setLoading(true);
+    try {
+      const updatedItem = await itemsAPI.update(id, { isActive: !item.isActive });
+      onItemsChange(items.map(i => 
+        i.id === id ? updatedItem : i
+      ));
+      toast.success(`Item ${updatedItem.isActive ? 'activated' : 'deactivated'} successfully`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update item status');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -5,22 +5,6 @@ export interface ApiError {
 }
 
 class ApiClient {
-  private token: string | null = null;
-
-  constructor() {
-    // Load token from localStorage
-    this.token = localStorage.getItem('auth_token');
-  }
-
-  setToken(token: string | null) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem('auth_token', token);
-    } else {
-      localStorage.removeItem('auth_token');
-    }
-  }
-
   async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -30,14 +14,10 @@ class ApiClient {
       ...(options.headers as Record<string, string>),
     };
 
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
-    }
-
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
-      credentials: 'include', // Include cookies
+      credentials: 'include', // Include cookies for session management
     });
 
     if (!response.ok) {
