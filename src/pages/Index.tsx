@@ -26,11 +26,14 @@ import PrintView from '@/components/PrintView';
 import UserManagement from '@/components/UserManagement';
 import Settings from '@/components/Settings';
 
-import { User, Vendor, Item, ComparisonRow, ComparisonHistory as ComparisonHistoryType, AttachmentFile, AppSettings } from '@/lib/types';
+import { Vendor, Item, ComparisonRow, ComparisonHistory as ComparisonHistoryType, AttachmentFile, AppSettings } from '@/lib/types';
+import { authService, AuthUser } from '@/lib/auth';
+import { getPermissions } from '@/lib/permissions';
 
 export default function Index() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [activeTab, setActiveTab] = useState('comparison');
+  const [initialized, setInitialized] = useState(false);
 
   // Data states
   const [vendors, setVendors] = useState<Vendor[]>([
@@ -44,27 +47,6 @@ export default function Index() {
   const [history, setHistory] = useState<ComparisonHistoryType[]>([]);
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [generalComments, setGeneralComments] = useState('');
-
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      username: 'john.maker',
-      password: 'maker123',
-      role: 'maker',
-      name: 'John Maker',
-      isActive: true,
-      createdAt: '2024-01-01'
-    },
-    {
-      id: '2', 
-      username: 'jane.checker',
-      password: 'checker123',
-      role: 'checker',
-      name: 'Jane Checker',
-      isActive: true,
-      createdAt: '2024-01-01'
-    }
-  ]);
 
   const [settings, setSettings] = useState<AppSettings>({
     companyName: 'Your Company Name',
@@ -81,14 +63,43 @@ export default function Index() {
     requestNumber: ''
   });
 
+  // Initialize auth service and admin user on first mount
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        // Initialize admin user with credentials from environment variables
+        const adminUsername = import.meta.env.VITE_ADMIN_USERNAME || 'admin';
+        const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+        
+        await authService.initializeAdminUser(adminUsername, adminPassword);
+        
+        // Try to restore session
+        await authService.initialize();
+        
+        const user = authService.getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+        }
+        
+        setInitialized(true);
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+        setInitialized(true);
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
   // Load data from localStorage on mount
   useEffect(() => {
+    if (!initialized) return;
+
     const savedVendors = localStorage.getItem('vendors');
     const savedItems = localStorage.getItem('items');
     const savedRows = localStorage.getItem('rows');
     const savedHistory = localStorage.getItem('history');
     const savedAttachments = localStorage.getItem('attachments');
-    const savedUsers = localStorage.getItem('users');
     const savedSettings = localStorage.getItem('settings');
     const savedGeneralComments = localStorage.getItem('generalComments');
 
@@ -97,67 +108,82 @@ export default function Index() {
     if (savedRows) setRows(JSON.parse(savedRows));
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     if (savedAttachments) setAttachments(JSON.parse(savedAttachments));
-    if (savedUsers) setUsers(JSON.parse(savedUsers));
     if (savedSettings) setSettings(JSON.parse(savedSettings));
     if (savedGeneralComments) setGeneralComments(savedGeneralComments);
-
-    // Auto-populate settings with current user info if available
-    const currentUserData = localStorage.getItem('currentUser');
-    if (currentUserData) {
-      const user = JSON.parse(currentUserData);
-      setCurrentUser(user);
-      setSettings(prev => ({
-        ...prev,
-        makerName: user.role === 'maker' ? user.name : prev.makerName,
-        checkerName: user.role === 'checker' ? user.name : prev.checkerName,
-        reqNo: prev.reqNo || 'REQ-' + new Date().getFullYear() + '-001',
-        date: prev.date || new Date().toISOString().split('T')[0]
-      }));
-    }
-  }, []);
+  }, [initialized]);
 
   // Save data to localStorage whenever state changes
   useEffect(() => {
+    if (!initialized) return;
     localStorage.setItem('vendors', JSON.stringify(vendors));
-  }, [vendors]);
+  }, [vendors, initialized]);
 
   useEffect(() => {
+    if (!initialized) return;
     localStorage.setItem('items', JSON.stringify(items));
-  }, [items]);
+  }, [items, initialized]);
 
   useEffect(() => {
+    if (!initialized) return;
     localStorage.setItem('rows', JSON.stringify(rows));
-  }, [rows]);
+  }, [rows, initialized]);
 
   useEffect(() => {
+    if (!initialized) return;
     localStorage.setItem('history', JSON.stringify(history));
-  }, [history]);
+  }, [history, initialized]);
 
   useEffect(() => {
+    if (!initialized) return;
     localStorage.setItem('attachments', JSON.stringify(attachments));
-  }, [attachments]);
+  }, [attachments, initialized]);
 
   useEffect(() => {
-    localStorage.setItem('users', JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
+    if (!initialized) return;
     localStorage.setItem('settings', JSON.stringify(settings));
-  }, [settings]);
+  }, [settings, initialized]);
 
   useEffect(() => {
+    if (!initialized) return;
     localStorage.setItem('generalComments', generalComments);
-  }, [generalComments]);
+  }, [generalComments, initialized]);
 
-  const handleLogin = (user: User) => {
+  const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
-    localStorage.setItem('currentUser', JSON.stringify(user));
+    
+    // Auto-populate settings with current user info
+    setSettings(prev => ({
+      ...prev,
+      makerName: user.role === 'maker' ? user.name : prev.makerName,
+      checkerName: user.role === 'checker' ? user.name : prev.checkerName,
+      reqNo: prev.reqNo || 'REQ-' + new Date().getFullYear() + '-001',
+      date: prev.date || new Date().toISOString().split('T')[0]
+    }));
   };
 
   const handleLogout = () => {
+    authService.logout();
     setCurrentUser(null);
-    localStorage.removeItem('currentUser');
   };
+
+  const handleUserUpdate = () => {
+    // Refresh current user data in case they updated their own profile
+    const updatedUser = authService.getCurrentUser();
+    if (updatedUser) {
+      setCurrentUser(updatedUser);
+    }
+  };
+
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return (
@@ -165,17 +191,19 @@ export default function Index() {
     );
   }
 
+  const permissions = getPermissions(currentUser);
+
   const tabItems = [
-    { id: 'comparison', label: 'Comparison', icon: BarChart3 },
-    { id: 'history', label: 'History', icon: History },
-    { id: 'items', label: 'Items', icon: Package },
-    { id: 'vendors', label: 'Vendors', icon: Building },
-    { id: 'attachments', label: 'Attachments', icon: Paperclip },
-    { id: 'print', label: 'Print', icon: Printer },
-    { id: 'signature', label: 'Signature', icon: PenTool },
-    { id: 'users', label: 'Users', icon: Users },
-    { id: 'settings', label: 'Settings', icon: SettingsIcon }
-  ];
+    { id: 'comparison', label: 'Comparison', icon: BarChart3, show: true },
+    { id: 'history', label: 'History', icon: History, show: permissions.canViewHistory },
+    { id: 'items', label: 'Items', icon: Package, show: permissions.canManageItems },
+    { id: 'vendors', label: 'Vendors', icon: Building, show: permissions.canManageVendors },
+    { id: 'attachments', label: 'Attachments', icon: Paperclip, show: permissions.canManageAttachments },
+    { id: 'print', label: 'Print', icon: Printer, show: permissions.canPrint },
+    { id: 'signature', label: 'Signature', icon: PenTool, show: true },
+    { id: 'users', label: 'Users', icon: Users, show: permissions.canViewUsers },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon, show: permissions.canEditSettings }
+  ].filter(tab => tab.show);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -188,7 +216,7 @@ export default function Index() {
               <p className="text-sm text-gray-600">Welcome, {currentUser.name}</p>
             </div>
             <div className="flex items-center space-x-4">
-              <Badge variant={currentUser.role === 'checker' ? 'default' : 'secondary'}>
+              <Badge variant={currentUser.role === 'admin' ? 'destructive' : currentUser.role === 'checker' ? 'default' : 'secondary'}>
                 {currentUser.role}
               </Badge>
               <Button variant="outline" onClick={handleLogout}>
@@ -203,7 +231,7 @@ export default function Index() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className={`grid w-full grid-cols-${tabItems.length}`}>
             {tabItems.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="flex items-center space-x-2">
                 <tab.icon className="h-4 w-4" />
@@ -223,41 +251,51 @@ export default function Index() {
             />
           </TabsContent>
 
-          <TabsContent value="history" className="space-y-6">
-            <ComparisonHistory
-              currentUser={currentUser}
-            />
-          </TabsContent>
+          {permissions.canViewHistory && (
+            <TabsContent value="history" className="space-y-6">
+              <ComparisonHistory
+                currentUser={currentUser}
+              />
+            </TabsContent>
+          )}
 
-          <TabsContent value="items" className="space-y-6">
-            <ItemManagement
-              items={items}
-              onItemsChange={setItems}
-            />
-          </TabsContent>
+          {permissions.canManageItems && (
+            <TabsContent value="items" className="space-y-6">
+              <ItemManagement
+                items={items}
+                onItemsChange={setItems}
+              />
+            </TabsContent>
+          )}
 
-          <TabsContent value="vendors" className="space-y-6">
-            <VendorManagement
-              vendors={vendors}
-              onVendorsChange={setVendors}
-            />
-          </TabsContent>
+          {permissions.canManageVendors && (
+            <TabsContent value="vendors" className="space-y-6">
+              <VendorManagement
+                vendors={vendors}
+                onVendorsChange={setVendors}
+              />
+            </TabsContent>
+          )}
 
-          <TabsContent value="attachments" className="space-y-6">
-            <AttachmentManager
-              currentUser={currentUser}
-            />
-          </TabsContent>
+          {permissions.canManageAttachments && (
+            <TabsContent value="attachments" className="space-y-6">
+              <AttachmentManager
+                currentUser={currentUser}
+              />
+            </TabsContent>
+          )}
 
-          <TabsContent value="print" className="space-y-6">
-            <PrintView
-              rows={rows}
-              vendors={vendors}
-              settings={settings}
-              currentUser={currentUser}
-              generalComments={generalComments}
-            />
-          </TabsContent>
+          {permissions.canPrint && (
+            <TabsContent value="print" className="space-y-6">
+              <PrintView
+                rows={rows}
+                vendors={vendors}
+                settings={settings}
+                currentUser={currentUser}
+                generalComments={generalComments}
+              />
+            </TabsContent>
+          )}
 
           <TabsContent value="signature" className="space-y-6">
             <Card>
@@ -273,20 +311,23 @@ export default function Index() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="users" className="space-y-6">
-            <UserManagement
-              users={users}
-              onUsersChange={setUsers}
-              currentUser={currentUser}
-            />
-          </TabsContent>
+          {permissions.canViewUsers && (
+            <TabsContent value="users" className="space-y-6">
+              <UserManagement
+                currentUser={currentUser}
+                onUserUpdate={handleUserUpdate}
+              />
+            </TabsContent>
+          )}
 
-          <TabsContent value="settings" className="space-y-6">
-            <Settings
-              settings={settings}
-              onSettingsChange={setSettings}
-            />
-          </TabsContent>
+          {permissions.canEditSettings && (
+            <TabsContent value="settings" className="space-y-6">
+              <Settings
+                settings={settings}
+                onSettingsChange={setSettings}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

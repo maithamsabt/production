@@ -1,13 +1,6 @@
-export interface User {
-  id: string;
-  username: string;
-  password: string;
-  role: 'maker' | 'checker' | 'admin';
-  name: string;
-  isActive: boolean;
-  createdAt: string;
-  lastLogin?: string;
-}
+// Re-export AuthUser as User for backward compatibility
+import type { AuthUser } from './auth';
+export type User = AuthUser;
 
 export interface Vendor {
   id: string;

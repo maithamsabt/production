@@ -5,32 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
-import { User } from '@/lib/types';
+import { authService, AuthUser } from '@/lib/auth';
 
 interface LoginFormProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: AuthUser) => void;
 }
-
-const DEFAULT_USERS: User[] = [
-  {
-    id: '1',
-    username: 'maker',
-    password: 'maker123',
-    role: 'maker',
-    name: 'John Maker',
-    isActive: true,
-    createdAt: '2024-01-01'
-  },
-  {
-    id: '2',
-    username: 'checker',
-    password: 'checker123',
-    role: 'checker',
-    name: 'Jane Checker',
-    isActive: true,
-    createdAt: '2024-01-01'
-  }
-];
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
   const [username, setUsername] = useState('');
@@ -45,20 +24,16 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setLoading(true);
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await authService.login(username, password);
 
-      const user = DEFAULT_USERS.find(
-        u => u.username === username && u.password === password && u.isActive
-      );
-
-      if (user) {
-        onLogin(user);
+      if (result.success && result.user) {
+        onLogin(result.user);
       } else {
-        setError('Invalid username or password');
+        setError(result.error || 'An error occurred during login');
       }
     } catch (err) {
       setError('An error occurred during login');
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
@@ -84,6 +59,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your username"
                 required
+                autoComplete="username"
               />
             </div>
             
@@ -97,6 +73,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
+                  autoComplete="current-password"
                 />
                 <Button
                   type="button"
@@ -131,14 +108,6 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
               )}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium mb-2">Demo Accounts:</h4>
-            <div className="space-y-1 text-sm">
-              <div><strong>Maker:</strong> maker / maker123</div>
-              <div><strong>Checker:</strong> checker / checker123</div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
