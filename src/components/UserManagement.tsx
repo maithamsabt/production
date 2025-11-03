@@ -13,12 +13,11 @@ import { getPermissions, getRoleBadgeVariant, getRoleDescription } from '@/lib/p
 import { toast } from 'sonner';
 
 interface UserManagementProps {
-  currentUser: AuthUser;
-  onUserUpdate?: () => void;
+  currentUser: User;
 }
 
-export default function UserManagement({ currentUser, onUserUpdate }: UserManagementProps) {
-  const [users, setUsers] = useState<AuthUser[]>([]);
+export default function UserManagement({ currentUser }: UserManagementProps) {
+  const [users, setUsers] = useState<User[]>([]);
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
@@ -108,7 +107,7 @@ export default function UserManagement({ currentUser, onUserUpdate }: UserManage
     }
   };
 
-  const startEdit = (user: AuthUser) => {
+  const startEdit = (user: User) => {
     setEditingId(user.id);
     setEditForm({
       username: user.username,

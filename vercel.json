@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm build",
+  "devCommand": "pnpm dev --port $PORT",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "outputDirectory": "dist"
+}

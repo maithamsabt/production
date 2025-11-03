@@ -27,11 +27,12 @@ import UserManagement from '@/components/UserManagement';
 import Settings from '@/components/Settings';
 
 import { Vendor, Item, ComparisonRow, ComparisonHistory as ComparisonHistoryType, AttachmentFile, AppSettings } from '@/lib/types';
-import { authService, AuthUser } from '@/lib/auth';
+import { authService } from '@/lib/auth';
+import type { User } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
 
 export default function Index() {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('comparison');
   const [initialized, setInitialized] = useState(false);
 
@@ -63,19 +64,11 @@ export default function Index() {
     requestNumber: ''
   });
 
-  // Initialize auth service and admin user on first mount
+  // Initialize auth service on first mount
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Initialize admin user with credentials from environment variables
-        const adminUsername = import.meta.env.VITE_ADMIN_USERNAME || 'admin';
-        const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
-        
-        await authService.initializeAdminUser(adminUsername, adminPassword);
-        
-        // Try to restore session
-        await authService.initialize();
-        
+        // Check if user is already logged in
         const user = authService.getCurrentUser();
         if (user) {
           setCurrentUser(user);
@@ -148,7 +141,7 @@ export default function Index() {
     localStorage.setItem('generalComments', generalComments);
   }, [generalComments, initialized]);
 
-  const handleLogin = (user: AuthUser) => {
+  const handleLogin = (user: User) => {
     setCurrentUser(user);
     
     // Auto-populate settings with current user info
@@ -231,7 +224,7 @@ export default function Index() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-${tabItems.length}`}>
+          <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full overflow-x-auto">
             {tabItems.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="flex items-center space-x-2">
                 <tab.icon className="h-4 w-4" />

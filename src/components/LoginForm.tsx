@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
-import { authService, AuthUser } from '@/lib/auth';
+import { authService } from '@/lib/auth';
+import type { User } from '@/lib/types';
 
 interface LoginFormProps {
-  onLogin: (user: AuthUser) => void;
+  onLogin: (user: User) => void;
 }
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
@@ -24,15 +25,10 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setLoading(true);
 
     try {
-      const result = await authService.login(username, password);
-
-      if (result.success && result.user) {
-        onLogin(result.user);
-      } else {
-        setError(result.error || 'An error occurred during login');
-      }
-    } catch (err) {
-      setError('An error occurred during login');
+      const user = await authService.login(username, password);
+      onLogin(user);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during login');
       console.error('Login error:', err);
     } finally {
       setLoading(false);
