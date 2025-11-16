@@ -76,16 +76,16 @@ export default function ComparisonTable({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Price Comparison Table</CardTitle>
+      <Card className="shadow-lg border-2 backdrop-blur-sm bg-card/95">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/30">
+          <CardTitle className="text-xl font-semibold">Price Comparison Table</CardTitle>
           <div className="flex space-x-2">
-            <Button onClick={() => setShowCalculations(!showCalculations)} variant="outline">
-              <Calculator className="h-4 w-4 mr-2" />
+            <Button onClick={() => setShowCalculations(!showCalculations)} variant="outline" className="gap-2 shadow-sm">
+              <Calculator className="h-4 w-4" />
               {showCalculations ? 'Hide' : 'Show'} Calculations
             </Button>
-            <Button onClick={addRow} disabled={!vendors.length} title={!vendors.length ? 'Select at least one vendor to start comparing' : undefined}>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={addRow} disabled={!vendors.length} title={!vendors.length ? 'Select at least one vendor to start comparing' : undefined} className="gap-2 shadow-sm">
+              <Plus className="h-4 w-4" />
               Add Row
             </Button>
           </div>
@@ -100,14 +100,14 @@ export default function ComparisonTable({
             </Alert>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="border-collapse">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Item</TableHead>
-                    <TableHead className="w-[150px]">Description</TableHead>
-                    <TableHead className="w-[100px]">Unit</TableHead>
+                  <TableRow className="border-b-2">
+                    <TableHead className="border-r border-l border-t bg-muted/50 font-semibold">Item</TableHead>
+                    <TableHead className="border-r border-t bg-muted/50 font-semibold">Description</TableHead>
+                    <TableHead className="border-r border-t bg-muted/50 font-semibold">Unit</TableHead>
                     {vendors.map((vendor) => (
-                      <TableHead key={vendor.id} className="text-center min-w-[120px]">
+                      <TableHead key={vendor.id} className="text-center min-w-[120px] border-r border-t bg-muted/50">
                         <div className="space-y-1">
                           <div className="flex items-center justify-center gap-1">
                             <span className="font-semibold text-sm">{vendor.name}</span>
@@ -115,7 +115,7 @@ export default function ComparisonTable({
                               variant="ghost"
                               size="sm"
                               onClick={() => onRemoveVendor(vendor.id)}
-                              className="h-5 w-5 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                              className="h-5 w-5 p-0 hover:bg-destructive hover:text-destructive-foreground rounded-full transition-all"
                               title="Remove vendor"
                             >
                               <X className="h-3 w-3" />
@@ -131,15 +131,15 @@ export default function ComparisonTable({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform shadow-sm"
                             title="Add vendor"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-56 p-2" align="start">
+                        <PopoverContent className="w-56 p-2 shadow-xl" align="start">
                           <div className="space-y-1">
-                            <p className="text-sm font-semibold mb-2">Add Vendor</p>
+                            <p className="text-sm font-semibold mb-2 px-2">Add Vendor</p>
                             {allVendors
                               .filter((v) => !vendors.find((sv) => sv.id === v.id))
                               .map((vendor) => (
@@ -147,7 +147,7 @@ export default function ComparisonTable({
                                   key={vendor.id}
                                   variant="ghost"
                                   size="sm"
-                                  className="w-full justify-start"
+                                  className="w-full justify-start hover:bg-primary/10 transition-colors"
                                   onClick={() => onAddVendor(vendor.id)}
                                 >
                                   {vendor.name}
@@ -160,14 +160,14 @@ export default function ComparisonTable({
                         </PopoverContent>
                       </Popover>
                     </TableHead>
-                    <TableHead className="w-[200px]">Remarks</TableHead>
-                    <TableHead className="w-[80px]">Actions</TableHead>
+                    <TableHead className="border-r border-t border-l bg-muted/50 font-semibold">Remarks</TableHead>
+                    <TableHead className="border-r border-t bg-muted/50 font-semibold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>
+                    <TableRow key={row.id} className="hover:bg-muted/40 transition-colors border-b">
+                      <TableCell className="border-r border-l">
                         <Select
                           value={row.itemId}
                           onValueChange={(value) => {
@@ -189,18 +189,18 @@ export default function ComparisonTable({
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="border-r">
                         <div className="text-sm">
                           {row.item?.description || '-'}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="border-r">
                         <div className="text-sm">
                           {row.item?.unit || '-'}
                         </div>
                       </TableCell>
                       {vendors.map((vendor, vendorIndex) => (
-                        <TableCell key={vendor.id} className="text-center">
+                        <TableCell key={vendor.id} className="text-center border-r">
                           <div className="space-y-2">
                             <Input
                               type="number"
@@ -232,10 +232,10 @@ export default function ComparisonTable({
                           </div>
                         </TableCell>
                       ))}
-                      <TableCell className="text-center">
+                      <TableCell className="text-center border-r border-l">
                         {/* Empty cell for + vendor column */}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="border-r">
                         <Textarea
                           placeholder="Add remarks..."
                           value={row.remarks}
@@ -243,7 +243,7 @@ export default function ComparisonTable({
                           className="min-h-[60px]"
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="border-r">
                         <Button
                           variant="outline"
                           size="sm"
@@ -261,16 +261,16 @@ export default function ComparisonTable({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>General Comments</CardTitle>
+      <Card className="shadow-lg border-2 backdrop-blur-sm bg-card/95">
+        <CardHeader className="border-b bg-muted/30">
+          <CardTitle className="text-lg font-semibold">General Comments</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <Textarea
             placeholder="Add general comments about this comparison..."
             value={generalComments}
             onChange={(e) => onGeneralCommentsChange(e.target.value)}
-            className="min-h-[100px]"
+            className="min-h-[100px] resize-none focus-visible:ring-2"
           />
         </CardContent>
       </Card>

@@ -36,11 +36,11 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Procurement System</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
+      <Card className="w-full max-w-md shadow-2xl border-2 backdrop-blur-sm bg-card/95">
+        <CardHeader className="text-center space-y-2">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Procurement System</CardTitle>
+          <CardDescription className="text-base">
             Sign in to access the price comparison system
           </CardDescription>
         </CardHeader>
@@ -93,7 +93,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full shadow-lg hover:shadow-xl transition-all" disabled={loading}>
               {loading ? (
                 'Signing in...'
               ) : (

@@ -1,7 +1,5 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Separator } from '@/components/ui/separator';
 import { Printer, Download } from 'lucide-react';
 import { PrintViewProps } from '@/lib/types';
 
@@ -25,138 +23,229 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
     return rows.reduce((total, row) => total + calculateTotal(row, vendorIndex), 0);
   };
 
+  const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between print:hidden">
-          <CardTitle>Print Preview</CardTitle>
+      <Card className="shadow-lg border-2 backdrop-blur-sm bg-card/95 print:shadow-none print:border-0">
+        <CardHeader className="flex flex-row items-center justify-between print:hidden border-b bg-muted/30">
+          <CardTitle className="text-xl font-semibold">Print Preview</CardTitle>
           <div className="flex space-x-2">
-            <Button onClick={handleDownloadPDF} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
+            <Button onClick={handleDownloadPDF} variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />
               Download PDF
             </Button>
-            <Button onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-2" />
+            <Button onClick={handlePrint} className="gap-2">
+              <Printer className="h-4 w-4" />
               Print
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="print:p-0">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold">{settings.companyName}</h1>
-              <p className="text-gray-600">{settings.companyAddress}</p>
-              <p className="text-gray-600">Phone: {settings.companyPhone} | Email: {settings.companyEmail}</p>
-              <Separator className="my-4" />
-              <h2 className="text-xl font-semibold">Price Comparison Sheet</h2>
+        <CardContent className="print:p-8">
+          {/* Print-specific styles */}
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden;
+              }
+              .print-content, .print-content * {
+                visibility: visible;
+              }
+              .print-content {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white;
+              }
+              @page {
+                margin: 1.5cm;
+                size: A4;
+              }
+              .page-break {
+                page-break-before: always;
+              }
+              table {
+                border-collapse: collapse !important;
+              }
+              th, td {
+                border: 1px solid #000 !important;
+                padding: 8px !important;
+              }
+            }
+          `}</style>
+
+          <div className="print-content">
+            {/* Official Document Header */}
+            <div className="text-center mb-8 pb-4 border-b-4 border-double border-primary">
+              <div className="mb-3">
+                <h1 className="text-3xl font-bold text-primary uppercase tracking-wide">{settings.companyName}</h1>
+                <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                  <p>{settings.companyAddress}</p>
+                  <p>Tel: {settings.companyPhone} | Email: {settings.companyEmail}</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <h2 className="text-2xl font-bold uppercase tracking-wide border-t-2 border-b-2 border-primary py-2 inline-block px-8">
+                  Price Comparison Quotation
+                </h2>
+              </div>
             </div>
 
-            {/* Document Info */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <p><strong>Request No:</strong> {settings.reqNo}</p>
-                <p><strong>Date:</strong> {settings.date}</p>
-                <p><strong>Purpose:</strong> {settings.purpose}</p>
+            {/* Document Reference Information */}
+            <div className="grid grid-cols-2 gap-6 mb-8 text-sm">
+              <div className="space-y-2">
+                <div className="flex">
+                  <span className="font-semibold w-32">Request No:</span>
+                  <span className="border-b border-dotted border-gray-400 flex-1 px-2">{settings.reqNo}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-semibold w-32">Date:</span>
+                  <span className="border-b border-dotted border-gray-400 flex-1 px-2">{settings.date || currentDate}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-semibold w-32">Purpose:</span>
+                  <span className="border-b border-dotted border-gray-400 flex-1 px-2">{settings.purpose}</span>
+                </div>
               </div>
-              <div>
-                <p><strong>Prepared by:</strong> {settings.makerName}</p>
-                <p><strong>Checked by:</strong> {settings.checkerName}</p>
-                <p><strong>Current User:</strong> {currentUser.name}</p>
+              <div className="space-y-2">
+                <div className="flex">
+                  <span className="font-semibold w-32">Prepared by:</span>
+                  <span className="border-b border-dotted border-gray-400 flex-1 px-2">{settings.makerName}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-semibold w-32">Checked by:</span>
+                  <span className="border-b border-dotted border-gray-400 flex-1 px-2">{settings.checkerName}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-semibold w-32">Reviewed by:</span>
+                  <span className="border-b border-dotted border-gray-400 flex-1 px-2">{currentUser.name}</span>
+                </div>
               </div>
             </div>
 
-            {/* Comparison Table */}
-            <div className="mb-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="border">Item</TableHead>
-                    <TableHead className="border">Description</TableHead>
-                    <TableHead className="border">UOM</TableHead>
+            {/* Professional Comparison Table */}
+            <div className="mb-8">
+              <table className="w-full border-2 border-black text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border-2 border-black p-3 text-left font-bold" rowSpan={2}>S/N</th>
+                    <th className="border-2 border-black p-3 text-left font-bold" rowSpan={2}>Item Description</th>
+                    <th className="border-2 border-black p-3 text-center font-bold" rowSpan={2}>Unit</th>
                     {vendors.map((vendor) => (
-                      <TableHead key={vendor.id} className="border text-center">
-                        {vendor.name}
-                      </TableHead>
+                      <th key={vendor.id} className="border-2 border-black p-3 text-center font-bold" colSpan={3}>
+                        {vendor.name.toUpperCase()}
+                      </th>
                     ))}
-                    <TableHead className="border">Remarks</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                    <th className="border-2 border-black p-3 text-center font-bold" rowSpan={2}>Remarks</th>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    {vendors.map((vendor) => (
+                      <>
+                        <th key={`${vendor.id}-qty`} className="border-2 border-black p-2 text-center text-xs font-semibold">Qty</th>
+                        <th key={`${vendor.id}-price`} className="border-2 border-black p-2 text-center text-xs font-semibold">Unit Price</th>
+                        <th key={`${vendor.id}-total`} className="border-2 border-black p-2 text-center text-xs font-semibold">Total</th>
+                      </>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   {rows.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="border">{row.item?.name || '-'}</TableCell>
-                      <TableCell className="border">{row.item?.description || '-'}</TableCell>
-                      <TableCell className="border">{row.item?.unit || '-'}</TableCell>
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="border-2 border-black p-2 text-center font-semibold">{index + 1}</td>
+                      <td className="border-2 border-black p-2">
+                        <div className="font-semibold">{row.item?.name || '-'}</div>
+                        <div className="text-xs text-gray-600">{row.item?.description || ''}</div>
+                      </td>
+                      <td className="border-2 border-black p-2 text-center">{row.item?.unit || '-'}</td>
                       {vendors.map((vendor, vendorIndex) => (
-                        <TableCell key={vendor.id} className="border text-center">
-                          <div>
-                            <div>Qty: {row.quantities?.[vendorIndex] || 0}</div>
-                            <div>Price: ${row.prices?.[vendorIndex] || 0}</div>
-                            <div className="font-semibold">
-                              Total: ${calculateTotal(row, vendorIndex).toFixed(2)}
-                            </div>
-                          </div>
-                        </TableCell>
+                        <>
+                          <td key={`${vendor.id}-${vendorIndex}-qty`} className="border-2 border-black p-2 text-center">
+                            {row.quantities?.[vendorIndex] || '-'}
+                          </td>
+                          <td key={`${vendor.id}-${vendorIndex}-price`} className="border-2 border-black p-2 text-right">
+                            ${(row.prices?.[vendorIndex] || 0).toFixed(2)}
+                          </td>
+                          <td key={`${vendor.id}-${vendorIndex}-total`} className="border-2 border-black p-2 text-right font-semibold">
+                            ${calculateTotal(row, vendorIndex).toFixed(2)}
+                          </td>
+                        </>
                       ))}
-                      <TableCell className="border">{row.remarks || '-'}</TableCell>
-                    </TableRow>
+                      <td className="border-2 border-black p-2 text-xs">{row.remarks || '-'}</td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Summary */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Summary</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {vendors.map((vendor, index) => (
-                  <div key={vendor.id} className="text-center p-4 border rounded">
-                    <div className="font-semibold">{vendor.name}</div>
-                    <div className="text-xl font-bold text-blue-600">
-                      ${getVendorTotal(index).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  {/* Totals Row */}
+                  <tr className="bg-gray-200 font-bold">
+                    <td colSpan={3} className="border-2 border-black p-3 text-right uppercase">Grand Total:</td>
+                    {vendors.map((vendor, index) => (
+                      <>
+                        <td key={`${vendor.id}-total-qty`} className="border-2 border-black"></td>
+                        <td key={`${vendor.id}-total-price`} className="border-2 border-black"></td>
+                        <td key={`${vendor.id}-total-amount`} className="border-2 border-black p-3 text-right text-lg">
+                          ${getVendorTotal(index).toFixed(2)}
+                        </td>
+                      </>
+                    ))}
+                    <td className="border-2 border-black"></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             {/* General Comments */}
             {generalComments && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">General Comments</h3>
-                <div className="p-4 border rounded bg-gray-50">
+              <div className="mb-8">
+                <h3 className="font-bold text-sm mb-2 uppercase border-b-2 border-gray-300 pb-1">General Comments:</h3>
+                <div className="p-4 border-2 border-gray-300 rounded bg-gray-50 text-sm whitespace-pre-wrap">
                   {generalComments}
                 </div>
               </div>
             )}
 
-            {/* Signatures */}
-            <div className="mt-8 grid grid-cols-2 gap-8">
-              <div>
-                <div className="border-b border-black pb-1 mb-2 h-16"></div>
-                <p className="text-center">
-                  <strong>Prepared by:</strong><br />
-                  {settings.makerName}<br />
-                  Date: ___________
-                </p>
+            {/* Signature Section */}
+            <div className="mt-12 grid grid-cols-3 gap-8 pt-8 border-t-2 border-gray-300">
+              <div className="text-center">
+                <div className="border-b-2 border-black pb-1 mb-2 h-20 flex items-end justify-center">
+                  {/* Signature space */}
+                </div>
+                <div className="space-y-1 text-sm">
+                  <p className="font-bold">PREPARED BY</p>
+                  <p>{settings.makerName}</p>
+                  <p className="text-xs">Date: ______________</p>
+                </div>
               </div>
-              <div>
-                <div className="border-b border-black pb-1 mb-2 h-16">
+              <div className="text-center">
+                <div className="border-b-2 border-black pb-1 mb-2 h-20 flex items-end justify-center">
                   {settings.checkerSignature && (
                     <img 
                       src={settings.checkerSignature} 
                       alt="Signature" 
-                      className="h-full object-contain mx-auto"
+                      className="h-full object-contain"
                     />
                   )}
                 </div>
-                <p className="text-center">
-                  <strong>Checked by:</strong><br />
-                  {settings.checkerName}<br />
-                  Date: ___________
-                </p>
+                <div className="space-y-1 text-sm">
+                  <p className="font-bold">CHECKED BY</p>
+                  <p>{settings.checkerName}</p>
+                  <p className="text-xs">Date: ______________</p>
+                </div>
               </div>
+              <div className="text-center">
+                <div className="border-b-2 border-black pb-1 mb-2 h-20 flex items-end justify-center">
+                  {/* Signature space */}
+                </div>
+                <div className="space-y-1 text-sm">
+                  <p className="font-bold">APPROVED BY</p>
+                  <p>_________________</p>
+                  <p className="text-xs">Date: ______________</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-8 pt-4 border-t border-gray-300 text-center text-xs text-gray-600">
+              <p>This is an official document generated by {settings.companyName} Procurement System</p>
+              <p>Document Reference: {settings.reqNo} | Generated on: {currentDate}</p>
             </div>
           </div>
         </CardContent>

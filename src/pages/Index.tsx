@@ -25,6 +25,7 @@ import AttachmentManager from '@/components/AttachmentManager';
 import PrintView from '@/components/PrintView';
 import UserManagement from '@/components/UserManagement';
 import Settings from '@/components/Settings';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 import { Vendor, Item, ComparisonRow, AppSettings } from '@/lib/types';
 import { authService } from '@/lib/auth';
@@ -224,21 +225,27 @@ export default function Index() {
   ].filter(tab => tab.show);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg shadow-md border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Procurement Comparison System</h1>
-              <p className="text-sm text-gray-600">Welcome, {currentUser.name}</p>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Procurement Comparison System
+              </h1>
+              <p className="text-sm text-muted-foreground">Welcome, {currentUser.name}</p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge variant={currentUser.role === 'admin' ? 'destructive' : currentUser.role === 'checker' ? 'default' : 'secondary'}>
+            <div className="flex items-center space-x-3">
+              <ThemeToggle />
+              <Badge 
+                variant={currentUser.role === 'admin' ? 'destructive' : currentUser.role === 'checker' ? 'default' : 'secondary'}
+                className="px-3 py-1"
+              >
                 {currentUser.role}
               </Badge>
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
+              <Button variant="outline" onClick={handleLogout} className="gap-2">
+                <LogOut className="h-4 w-4" />
                 Logout
               </Button>
             </div>
@@ -249,9 +256,13 @@ export default function Index() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full overflow-x-auto">
+          <TabsList className="inline-flex h-12 items-center justify-center rounded-lg bg-muted/50 backdrop-blur-sm p-1.5 text-muted-foreground w-full overflow-x-auto shadow-sm">
             {tabItems.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id} className="flex items-center space-x-2">
+              <TabsTrigger 
+                key={tab.id} 
+                value={tab.id} 
+                className="flex items-center space-x-2 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+              >
                 <tab.icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
               </TabsTrigger>
