@@ -133,15 +133,6 @@ export interface SignatureUploadProps {
   currentUser: User;
 }
 
-export interface ComparisonTableProps {
-  rows: ComparisonRow[];
-  items: Item[];
-  vendors: Vendor[];
-  onRowsChange: (rows: ComparisonRow[]) => void;
-  generalComments: string;
-  onGeneralCommentsChange: (comments: string) => void;
-}
-
 export interface ComparisonHistoryProps {
   currentUser: User;
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,43 @@ import { vendorsAPI, itemsAPI } from '@/lib/api';
 import type { User } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
 
+const remapRowsForVendors = (
+  rows: ComparisonRow[],
+  previousVendorIds: string[],
+  nextVendorIds: string[]
+): ComparisonRow[] => {
+  if (!rows.length) {
+    return rows;
+  }
+
+  return rows.map((row) => {
+    const vendorValueMap = previousVendorIds.reduce<Record<string, { quantity: number; price: number }>>((acc, vendorId, index) => {
+      acc[vendorId] = {
+        quantity: row.quantities?.[index] ?? 0,
+        price: row.prices?.[index] ?? 0
+      };
+      return acc;
+    }, {});
+
+    const updatedQuantities = nextVendorIds.map((vendorId) => vendorValueMap[vendorId]?.quantity ?? 0);
+    const updatedPrices = nextVendorIds.map((vendorId) => vendorValueMap[vendorId]?.price ?? 0);
+
+    const previousSelectedVendorId =
+      row.selectedVendorIndex !== null && row.selectedVendorIndex !== undefined
+        ? previousVendorIds[row.selectedVendorIndex]
+        : null;
+
+    const nextSelectedIndex = previousSelectedVendorId ? nextVendorIds.indexOf(previousSelectedVendorId) : -1;
+
+    return {
+      ...row,
+      quantities: updatedQuantities,
+      prices: updatedPrices,
+      selectedVendorIndex: nextSelectedIndex >= 0 ? nextSelectedIndex : null
+    };
+  });
+};
+
 export default function Index() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('comparison');
@@ -39,6 +76,7 @@ export default function Index() {
 
   // Data states
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [rows, setRows] = useState<ComparisonRow[]>([]);
   const [generalComments, setGeneralComments] = useState('');
@@ -75,6 +113,40 @@ export default function Index() {
       console.error('Failed to load data from database:', error);
     }
   };
+
+  const handleVendorSelectionChange = useCallback((nextVendorIds: string[]) => {
+    setRows((prevRows) => remapRowsForVendors(prevRows, selectedVendorIds, nextVendorIds));
+    setSelectedVendorIds(nextVendorIds);
+  }, [selectedVendorIds]);
+
+  const handleAddVendor = useCallback((vendorId: string) => {
+    if (!selectedVendorIds.includes(vendorId)) {
+      handleVendorSelectionChange([...selectedVendorIds, vendorId]);
+    }
+  }, [selectedVendorIds, handleVendorSelectionChange]);
+
+  const handleRemoveVendor = useCallback((vendorId: string) => {
+    handleVendorSelectionChange(selectedVendorIds.filter((id) => id !== vendorId));
+  }, [selectedVendorIds, handleVendorSelectionChange]);
+
+  useEffect(() => {
+    if (!vendors.length) {
+      if (selectedVendorIds.length) {
+        handleVendorSelectionChange([]);
+      }
+      return;
+    }
+
+    if (!selectedVendorIds.length) {
+      handleVendorSelectionChange(vendors.slice(0, Math.min(3, vendors.length)).map((vendor) => vendor.id));
+      return;
+    }
+
+    const filteredSelection = selectedVendorIds.filter((vendorId) => vendors.some((vendor) => vendor.id === vendorId));
+    if (filteredSelection.length !== selectedVendorIds.length) {
+      handleVendorSelectionChange(filteredSelection);
+    }
+  }, [vendors, selectedVendorIds, handleVendorSelectionChange]);
 
   // Initialize auth service and load data on first mount
   useEffect(() => {
@@ -137,6 +209,7 @@ export default function Index() {
   }
 
   const permissions = getPermissions(currentUser);
+  const selectedVendors = vendors.filter((vendor) => selectedVendorIds.includes(vendor.id));
 
   const tabItems = [
     { id: 'comparison', label: 'Comparison', icon: BarChart3, show: true },
@@ -189,8 +262,11 @@ export default function Index() {
             <ComparisonTable
               rows={rows}
               items={items}
-              vendors={vendors}
+              vendors={selectedVendors}
+              allVendors={vendors}
               onRowsChange={setRows}
+              onAddVendor={handleAddVendor}
+              onRemoveVendor={handleRemoveVendor}
               generalComments={generalComments}
               onGeneralCommentsChange={setGeneralComments}
             />
@@ -234,7 +310,7 @@ export default function Index() {
             <TabsContent value="print" className="space-y-6">
               <PrintView
                 rows={rows}
-                vendors={vendors}
+                vendors={selectedVendors}
                 settings={settings}
                 currentUser={currentUser}
                 generalComments={generalComments}

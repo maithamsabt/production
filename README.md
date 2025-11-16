@@ -37,6 +37,16 @@ All shadcn/ui components have been downloaded under `@/components/ui`.
 - Import components from `@/components/ui` in your React components
 - Customize the UI by modifying the Tailwind configuration
 
+**Backend API**
+
+- Run `pnpm run dev:server` to start the Express API that listens on port `3001` (or the `PORT` env var).
+- While the backend is running, `pnpm run dev:all` (or `concurrently`) keeps the frontend (`npm run dev`) and backend up together.
+
+**API-aware dev server**
+
+- Vite proxies `/api` requests to the Express backend via `http://localhost:3001` (override the target with `VITE_API_URL`).
+- You can keep `npm run dev` running alone if the backend is running separately or use `pnpm run dev:all` to manage both.
+
 ## Note
 
 - The `@/` path alias points to the `src/` directory

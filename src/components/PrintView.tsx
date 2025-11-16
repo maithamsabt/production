@@ -79,7 +79,6 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
                         {vendor.name}
                       </TableHead>
                     ))}
-                    <TableHead className="border">Selected</TableHead>
                     <TableHead className="border">Remarks</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -100,12 +99,6 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
                           </div>
                         </TableCell>
                       ))}
-                      <TableCell className="border">
-                        {row.selectedVendorIndex !== null && row.selectedVendorIndex !== undefined
-                          ? vendors[row.selectedVendorIndex]?.name || '-'
-                          : '-'
-                        }
-                      </TableCell>
                       <TableCell className="border">{row.remarks || '-'}</TableCell>
                     </TableRow>
                   ))}
