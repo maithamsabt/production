@@ -186,10 +186,10 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
                             {row.quantities?.[vendorIndex] || '-'}
                           </td>
                           <td key={`${vendor.id}-${vendorIndex}-price`} className="border-2 border-foreground p-2 text-right">
-                            ${(row.prices?.[vendorIndex] || 0).toFixed(2)}
+                            {(row.prices?.[vendorIndex] || 0).toFixed(3)} BHD
                           </td>
                           <td key={`${vendor.id}-${vendorIndex}-total`} className="border-2 border-foreground p-2 text-right font-semibold">
-                            ${calculateTotal(row, vendorIndex).toFixed(2)}
+                            {calculateTotal(row, vendorIndex).toFixed(3)} BHD
                           </td>
                         </>
                       ))}
@@ -204,7 +204,7 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
                         <td key={`${vendor.id}-total-qty`} className="border-2 border-foreground"></td>
                         <td key={`${vendor.id}-total-price`} className="border-2 border-foreground"></td>
                         <td key={`${vendor.id}-total-amount`} className="border-2 border-foreground p-3 text-right text-lg">
-                          ${getVendorTotal(index).toFixed(2)}
+                          {getVendorTotal(index).toFixed(3)} BHD
                         </td>
                       </>
                     ))}

@@ -226,7 +226,7 @@ export default function ComparisonTable({
                             />
                             {showCalculations && (
                               <div className="text-xs text-gray-600 font-medium">
-                                Total: ${((row.quantities[vendorIndex] || 0) * (row.prices[vendorIndex] || 0)).toFixed(2)}
+                                Total: {((row.quantities[vendorIndex] || 0) * (row.prices[vendorIndex] || 0)).toFixed(3)} BHD
                               </div>
                             )}
                           </div>
