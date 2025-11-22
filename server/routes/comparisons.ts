@@ -110,20 +110,23 @@ router.post('/', authenticate, async (req: any, res) => {
 
     // Create comparison rows if provided
     if (rows && rows.length > 0) {
-      await db.insert(comparisonRows).values(
-        rows.map((row: any, index: number) => ({
-          comparisonId: newComparison.id,
-          srl: index + 1,
-          itemId: row.itemId,
-          description: row.description || '',
-          qty: row.quantities?.[0] || 0,
-          uom: row.uom || 'NOS',
-          quantities: row.quantities || [],
-          prices: row.prices || [],
-          remarks: row.remarks || '',
-          comment: row.comment || '',
-        }))
-      );
+      const validRows = rows.filter((row: any) => row.itemId && row.itemId.trim() !== '');
+      if (validRows.length > 0) {
+        await db.insert(comparisonRows).values(
+          validRows.map((row: any, index: number) => ({
+            comparisonId: newComparison.id,
+            srl: index + 1,
+            itemId: row.itemId,
+            description: row.description || '',
+            qty: row.quantities?.[0] || 0,
+            uom: row.uom || 'NOS',
+            quantities: row.quantities || [],
+            prices: row.prices || [],
+            remarks: row.remarks || '',
+            comment: row.comment || '',
+          }))
+        );
+      }
     }
 
     // Create comparison vendors if provided
@@ -211,20 +214,23 @@ router.put('/:id', authenticate, async (req: any, res) => {
     // Update rows if provided
     if (rows && rows.length > 0) {
       await db.delete(comparisonRows).where(eq(comparisonRows.comparisonId, comparisonId));
-      await db.insert(comparisonRows).values(
-        rows.map((row: any, index: number) => ({
-          comparisonId,
-          srl: index + 1,
-          itemId: row.itemId,
-          description: row.description || '',
-          qty: row.quantities?.[0] || 0,
-          uom: row.uom || 'NOS',
-          quantities: row.quantities || [],
-          prices: row.prices || [],
-          remarks: row.remarks || '',
-          comment: row.comment || '',
-        }))
-      );
+      const validRows = rows.filter((row: any) => row.itemId && row.itemId.trim() !== '');
+      if (validRows.length > 0) {
+        await db.insert(comparisonRows).values(
+          validRows.map((row: any, index: number) => ({
+            comparisonId,
+            srl: index + 1,
+            itemId: row.itemId,
+            description: row.description || '',
+            qty: row.quantities?.[0] || 0,
+            uom: row.uom || 'NOS',
+            quantities: row.quantities || [],
+            prices: row.prices || [],
+            remarks: row.remarks || '',
+            comment: row.comment || '',
+          }))
+        );
+      }
     }
 
     // Fetch full comparison with relations

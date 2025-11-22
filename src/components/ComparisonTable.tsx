@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +49,11 @@ export default function ComparisonTable({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [comparisonTitle, setComparisonTitle] = useState(title || '');
+  
+  // Sync comparisonTitle when title prop changes (e.g., when loading a different comparison)
+  useEffect(() => {
+    setComparisonTitle(title || '');
+  }, [title]);
   
   // Determine if comparison is readonly (processed or in-process)
   const isReadonly = Boolean(comparisonStatus && comparisonStatus !== 'draft');
@@ -129,9 +134,13 @@ export default function ComparisonTable({
         selectedVendors: vendors.map(v => v.id),
         rows: rows.map(row => ({
           itemId: row.itemId,
+          description: row.item?.description || row.description || '',
+          qty: row.qty || 0,
+          uom: row.item?.unit || row.uom || 'NOS',
           quantities: row.quantities,
           prices: row.prices,
-          remarks: row.remarks,
+          remarks: row.remarks || '',
+          comment: row.comment || '',
         })),
         generalComments,
         status: 'draft',
