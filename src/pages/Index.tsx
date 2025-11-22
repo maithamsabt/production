@@ -191,6 +191,13 @@ export default function Index() {
     setRows([]);
     setGeneralComments('');
     
+    // Reset settings fields for new comparison
+    setSettings(prev => ({
+      ...prev,
+      reqNo: '',
+      purpose: 'Procurement Comparison',
+    }));
+    
     // Auto-select first 3 vendors as default
     const defaultVendorIds = vendors.slice(0, Math.min(3, vendors.length)).map(v => v.id);
     setSelectedVendorIds(defaultVendorIds);
