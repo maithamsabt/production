@@ -151,11 +151,15 @@ export default function PrintView({ rows, vendors, settings, currentUser: _curre
               <div className="space-y-2">
                 <div className="flex">
                   <span className="font-semibold w-32">Prepared by:</span>
-                  <span className="border-b border-dotted border-border flex-1 px-2">{settings.makerName}</span>
+                  <span className="border-b border-dotted border-border flex-1 px-2">
+                    {activeComparison?.creator?.name || settings.makerName}
+                  </span>
                 </div>
                 <div className="flex">
                   <span className="font-semibold w-32">Checked by:</span>
-                  <span className="border-b border-dotted border-border flex-1 px-2">{settings.checkerName}</span>
+                  <span className="border-b border-dotted border-border flex-1 px-2">
+                    {activeComparison?.reviewer?.name || settings.checkerName}
+                  </span>
                 </div>
               </div>
             </div>
@@ -277,40 +281,6 @@ export default function PrintView({ rows, vendors, settings, currentUser: _curre
                 <div className="p-4 border-2 border-border rounded bg-muted/30 text-sm whitespace-pre-wrap">
                   {generalComments}
                 </div>
-              </div>
-            )}
-
-            {/* Approval Section - Only show for submitted/approved/rejected comparisons */}
-            {activeComparison && activeComparison.status !== 'draft' && (
-              <div className="mt-12 grid grid-cols-2 gap-8">
-                <div>
-                  <div className="border-b-2 border-foreground pb-2 mb-4">
-                    <p className="text-sm font-semibold uppercase">Prepared By:</p>
-                    <p className="text-base font-bold mt-2">{activeComparison.creator?.name || 'N/A'}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {activeComparison.createdAt ? new Date(activeComparison.createdAt).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      }) : ''}
-                    </p>
-                  </div>
-                </div>
-                {activeComparison.status !== 'submitted' && activeComparison.reviewer && (
-                  <div>
-                    <div className="border-b-2 border-foreground pb-2 mb-4">
-                      <p className="text-sm font-semibold uppercase">Checked By:</p>
-                      <p className="text-base font-bold mt-2">{activeComparison.reviewer?.name || 'N/A'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {activeComparison.reviewedAt ? new Date(activeComparison.reviewedAt).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        }) : ''}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
