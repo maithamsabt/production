@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { comparisons, comparisonRows, comparisonVendors, attachments } from '../db/schema';
+import { comparisons, comparisonRows, comparisonVendors, attachments, vendors } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticate } from '../middleware/auth';
 
@@ -12,17 +12,13 @@ router.get('/', authenticate, async (req, res) => {
     const allComparisons = await db.query.comparisons.findMany({
       orderBy: (comparisons, { desc }) => [desc(comparisons.createdAt)],
       with: {
-        comparisonVendors: {
-          with: {
-            vendor: true,
-          },
-        },
-        comparisonRows: {
+        creator: true,
+        reviewer: true,
+        rows: {
           with: {
             item: true,
           },
         },
-        attachments: true,
       },
     });
 
@@ -33,23 +29,19 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// Get comparison by ID
+// Get comparison by ID with full details for viewing/printing
 router.get('/:id', authenticate, async (req, res) => {
   try {
     const comparison = await db.query.comparisons.findFirst({
       where: eq(comparisons.id, req.params.id),
       with: {
-        comparisonVendors: {
-          with: {
-            vendor: true,
-          },
-        },
-        comparisonRows: {
+        creator: true,
+        reviewer: true,
+        rows: {
           with: {
             item: true,
           },
         },
-        attachments: true,
       },
     });
 
@@ -57,7 +49,20 @@ router.get('/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Comparison not found' });
     }
 
-    res.json(comparison);
+    // Get vendors for this comparison
+    const compVendors = await db.query.comparisonVendors.findMany({
+      where: eq(comparisonVendors.comparisonId, req.params.id),
+      with: {
+        vendor: true,
+      },
+    });
+
+    const vendorsList = compVendors.map(cv => cv.vendor);
+
+    res.json({
+      ...comparison,
+      vendors: vendorsList,
+    });
   } catch (error) {
     console.error('Get comparison error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -67,48 +72,56 @@ router.get('/:id', authenticate, async (req, res) => {
 // Create comparison
 router.post('/', authenticate, async (req: any, res) => {
   try {
-    const { projectName, projectNumber, selectedVendors, rows, status = 'draft' } = req.body;
+    const { requestNumber, title, selectedVendors, rows, generalComments, status = 'draft' } = req.body;
 
-    if (!projectName || !selectedVendors || !rows) {
-      return res.status(400).json({ error: 'Project name, vendors, and rows are required' });
-    }
+    const reqNumber = requestNumber || `REQ-${Date.now()}`;
+    const compTitle = title || 'Price Comparison';
 
     // Create comparison
     const [newComparison] = await db.insert(comparisons).values({
-      projectName,
-      projectNumber,
+      requestNumber: reqNumber,
+      title: compTitle,
       status,
       createdBy: req.user.id,
+      generalComments: generalComments || '',
     }).returning();
 
-    // Create comparison vendors
-    await db.insert(comparisonVendors).values(
-      selectedVendors.map((vendorId: string) => ({
-        comparisonId: newComparison.id,
-        vendorId,
-      }))
-    );
+    // Create comparison rows if provided
+    if (rows && rows.length > 0) {
+      await db.insert(comparisonRows).values(
+        rows.map((row: any, index: number) => ({
+          comparisonId: newComparison.id,
+          srl: index + 1,
+          itemId: row.itemId,
+          description: row.description || '',
+          qty: row.quantities?.[0] || 0,
+          uom: row.uom || 'NOS',
+          quantities: row.quantities || [],
+          prices: row.prices || [],
+          remarks: row.remarks || '',
+          comment: row.comment || '',
+        }))
+      );
+    }
 
-    // Create comparison rows
-    await db.insert(comparisonRows).values(
-      rows.map((row: any) => ({
-        comparisonId: newComparison.id,
-        itemId: row.itemId,
-        quantity: row.quantity,
-        vendorPrices: row.vendorPrices || {},
-      }))
-    );
+    // Create comparison vendors if provided
+    if (selectedVendors && selectedVendors.length > 0) {
+      await db.insert(comparisonVendors).values(
+        selectedVendors.map((vendorId: string, index: number) => ({
+          comparisonId: newComparison.id,
+          vendorId,
+          position: index + 1,
+        }))
+      );
+    }
 
     // Fetch full comparison with relations
     const fullComparison = await db.query.comparisons.findFirst({
       where: eq(comparisons.id, newComparison.id),
       with: {
-        comparisonVendors: {
-          with: {
-            vendor: true,
-          },
-        },
-        comparisonRows: {
+        creator: true,
+        reviewer: true,
+        rows: {
           with: {
             item: true,
           },
@@ -116,7 +129,18 @@ router.post('/', authenticate, async (req: any, res) => {
       },
     });
 
-    res.status(201).json(fullComparison);
+    // Get vendors for response
+    const compVendors = await db.query.comparisonVendors.findMany({
+      where: eq(comparisonVendors.comparisonId, newComparison.id),
+      with: {
+        vendor: true,
+      },
+    });
+
+    res.status(201).json({
+      ...fullComparison,
+      vendors: compVendors.map(cv => cv.vendor),
+    });
   } catch (error) {
     console.error('Create comparison error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -126,7 +150,7 @@ router.post('/', authenticate, async (req: any, res) => {
 // Update comparison
 router.put('/:id', authenticate, async (req: any, res) => {
   try {
-    const { projectName, projectNumber, selectedVendors, rows, status, selectedVendor } = req.body;
+    const { selectedVendors, rows, status, title, requestNumber, generalComments } = req.body;
     const comparisonId = req.params.id;
 
     // Check if comparison exists
@@ -140,35 +164,43 @@ router.put('/:id', authenticate, async (req: any, res) => {
 
     // Update comparison
     const updates: any = {};
-    if (projectName) updates.projectName = projectName;
-    if (projectNumber) updates.projectNumber = projectNumber;
+    if (title) updates.title = title;
+    if (requestNumber) updates.requestNumber = requestNumber;
     if (status) updates.status = status;
-    if (selectedVendor) updates.selectedVendor = selectedVendor;
+    if (generalComments !== undefined) updates.generalComments = generalComments;
+    updates.updatedAt = new Date();
 
     await db.update(comparisons)
       .set(updates)
       .where(eq(comparisons.id, comparisonId));
 
     // Update vendors if provided
-    if (selectedVendors) {
+    if (selectedVendors && selectedVendors.length > 0) {
       await db.delete(comparisonVendors).where(eq(comparisonVendors.comparisonId, comparisonId));
       await db.insert(comparisonVendors).values(
-        selectedVendors.map((vendorId: string) => ({
+        selectedVendors.map((vendorId: string, index: number) => ({
           comparisonId,
           vendorId,
+          position: index + 1,
         }))
       );
     }
 
     // Update rows if provided
-    if (rows) {
+    if (rows && rows.length > 0) {
       await db.delete(comparisonRows).where(eq(comparisonRows.comparisonId, comparisonId));
       await db.insert(comparisonRows).values(
-        rows.map((row: any) => ({
+        rows.map((row: any, index: number) => ({
           comparisonId,
+          srl: index + 1,
           itemId: row.itemId,
-          quantity: row.quantity,
-          vendorPrices: row.vendorPrices || {},
+          description: row.description || '',
+          qty: row.quantities?.[0] || 0,
+          uom: row.uom || 'NOS',
+          quantities: row.quantities || [],
+          prices: row.prices || [],
+          remarks: row.remarks || '',
+          comment: row.comment || '',
         }))
       );
     }
@@ -177,23 +209,147 @@ router.put('/:id', authenticate, async (req: any, res) => {
     const updatedComparison = await db.query.comparisons.findFirst({
       where: eq(comparisons.id, comparisonId),
       with: {
-        comparisonVendors: {
-          with: {
-            vendor: true,
-          },
-        },
-        comparisonRows: {
+        creator: true,
+        reviewer: true,
+        rows: {
           with: {
             item: true,
           },
         },
-        attachments: true,
       },
     });
 
-    res.json(updatedComparison);
+    // Get vendors for response
+    const compVendors = await db.query.comparisonVendors.findMany({
+      where: eq(comparisonVendors.comparisonId, comparisonId),
+      with: {
+        vendor: true,
+      },
+    });
+
+    res.json({
+      ...updatedComparison,
+      vendors: compVendors.map(cv => cv.vendor),
+    });
   } catch (error) {
     console.error('Update comparison error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Submit comparison for review
+router.post('/:id/submit', authenticate, async (req: any, res) => {
+  try {
+    const comparisonId = req.params.id;
+
+    const existing = await db.query.comparisons.findFirst({
+      where: eq(comparisons.id, comparisonId),
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Comparison not found' });
+    }
+
+    if (existing.status !== 'draft') {
+      return res.status(400).json({ error: 'Only draft comparisons can be submitted' });
+    }
+
+    const [updated] = await db.update(comparisons)
+      .set({
+        status: 'submitted',
+        submittedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(comparisons.id, comparisonId))
+      .returning();
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Submit comparison error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Approve comparison (checker/admin only)
+router.post('/:id/approve', authenticate, async (req: any, res) => {
+  try {
+    const comparisonId = req.params.id;
+    const user = req.user;
+
+    if (user.role !== 'checker' && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only checkers and admins can approve comparisons' });
+    }
+
+    const existing = await db.query.comparisons.findFirst({
+      where: eq(comparisons.id, comparisonId),
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Comparison not found' });
+    }
+
+    if (existing.status !== 'submitted') {
+      return res.status(400).json({ error: 'Only submitted comparisons can be approved' });
+    }
+
+    const [updated] = await db.update(comparisons)
+      .set({
+        status: 'approved',
+        reviewedAt: new Date(),
+        reviewedBy: user.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(comparisons.id, comparisonId))
+      .returning();
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Approve comparison error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Reject comparison (checker/admin only)
+router.post('/:id/reject', authenticate, async (req: any, res) => {
+  try {
+    const comparisonId = req.params.id;
+    const { rejectionReason } = req.body;
+    const user = req.user;
+
+    if (user.role !== 'checker' && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only checkers and admins can reject comparisons' });
+    }
+
+    if (!rejectionReason) {
+      return res.status(400).json({ error: 'Rejection reason is required' });
+    }
+
+    const existing = await db.query.comparisons.findFirst({
+      where: eq(comparisons.id, comparisonId),
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Comparison not found' });
+    }
+
+    if (existing.status !== 'submitted') {
+      return res.status(400).json({ error: 'Only submitted comparisons can be rejected' });
+    }
+
+    const [updated] = await db.update(comparisons)
+      .set({
+        status: 'rejected',
+        reviewedAt: new Date(),
+        reviewedBy: user.id,
+        rejectionReason,
+        updatedAt: new Date(),
+      })
+      .where(eq(comparisons.id, comparisonId))
+      .returning();
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Reject comparison error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

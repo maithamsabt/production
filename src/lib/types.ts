@@ -31,6 +31,7 @@ export interface Item {
   specification: string;
   unit: string;
   category: string;
+  isVatable: boolean;
   isActive: boolean;
   createdAt: string;
 }
@@ -127,6 +128,7 @@ export interface PrintViewProps {
   settings: AppSettings;
   currentUser: User;
   generalComments: string;
+  activeComparison?: any;
 }
 
 export interface SignatureUploadProps {

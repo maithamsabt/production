@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Printer, Download } from 'lucide-react';
 import { PrintViewProps } from '@/lib/types';
 
-export default function PrintView({ rows, vendors, settings, currentUser, generalComments }: PrintViewProps) {
+export default function PrintView({ rows, vendors, settings, currentUser: _currentUser, generalComments, activeComparison }: PrintViewProps) {
   const handlePrint = () => {
     window.print();
   };
@@ -19,8 +19,26 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
     return quantity * price;
   };
 
-  const getVendorTotal = (vendorIndex: number) => {
+  const calculateVAT = (row: any, vendorIndex: number) => {
+    const total = calculateTotal(row, vendorIndex);
+    const isVatable = row.item?.isVatable !== undefined ? row.item.isVatable : true;
+    return isVatable ? total * (settings.defaultVat / 100) : 0;
+  };
+
+  const calculateTotalWithVAT = (row: any, vendorIndex: number) => {
+    return calculateTotal(row, vendorIndex) + calculateVAT(row, vendorIndex);
+  };
+
+  const getVendorSubtotal = (vendorIndex: number) => {
     return rows.reduce((total, row) => total + calculateTotal(row, vendorIndex), 0);
+  };
+
+  const getVendorVAT = (vendorIndex: number) => {
+    return rows.reduce((total, row) => total + calculateVAT(row, vendorIndex), 0);
+  };
+
+  const getVendorTotal = (vendorIndex: number) => {
+    return getVendorSubtotal(vendorIndex) + getVendorVAT(vendorIndex);
   };
 
   const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -139,10 +157,6 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
                   <span className="font-semibold w-32">Checked by:</span>
                   <span className="border-b border-dotted border-border flex-1 px-2">{settings.checkerName}</span>
                 </div>
-                <div className="flex">
-                  <span className="font-semibold w-32">Reviewed by:</span>
-                  <span className="border-b border-dotted border-border flex-1 px-2">{currentUser.name}</span>
-                </div>
               </div>
             </div>
 
@@ -155,7 +169,7 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
                     <th className="border-2 border-foreground p-3 text-left font-bold" rowSpan={2}>Item Description</th>
                     <th className="border-2 border-foreground p-3 text-center font-bold" rowSpan={2}>Unit</th>
                     {vendors.map((vendor) => (
-                      <th key={vendor.id} className="border-2 border-foreground p-3 text-center font-bold" colSpan={3}>
+                      <th key={vendor.id} className="border-2 border-foreground p-3 text-center font-bold" colSpan={5}>
                         {vendor.name.toUpperCase()}
                       </th>
                     ))}
@@ -166,6 +180,8 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
                       <>
                         <th key={`${vendor.id}-qty`} className="border-2 border-foreground p-2 text-center text-xs font-semibold">Qty</th>
                         <th key={`${vendor.id}-price`} className="border-2 border-foreground p-2 text-center text-xs font-semibold">Unit Price</th>
+                        <th key={`${vendor.id}-subtotal`} className="border-2 border-foreground p-2 text-center text-xs font-semibold">Subtotal</th>
+                        <th key={`${vendor.id}-vat`} className="border-2 border-foreground p-2 text-center text-xs font-semibold">VAT</th>
                         <th key={`${vendor.id}-total`} className="border-2 border-foreground p-2 text-center text-xs font-semibold">Total</th>
                       </>
                     ))}
@@ -188,21 +204,61 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
                           <td key={`${vendor.id}-${vendorIndex}-price`} className="border-2 border-foreground p-2 text-right">
                             {(row.prices?.[vendorIndex] || 0).toFixed(3)} BHD
                           </td>
-                          <td key={`${vendor.id}-${vendorIndex}-total`} className="border-2 border-foreground p-2 text-right font-semibold">
+                          <td key={`${vendor.id}-${vendorIndex}-subtotal`} className="border-2 border-foreground p-2 text-right">
                             {calculateTotal(row, vendorIndex).toFixed(3)} BHD
+                          </td>
+                          <td key={`${vendor.id}-${vendorIndex}-vat`} className="border-2 border-foreground p-2 text-right">
+                            {row.item?.isVatable ? calculateVAT(row, vendorIndex).toFixed(3) : '0.000'} BHD
+                          </td>
+                          <td key={`${vendor.id}-${vendorIndex}-total`} className="border-2 border-foreground p-2 text-right font-semibold">
+                            {calculateTotalWithVAT(row, vendorIndex).toFixed(3)} BHD
                           </td>
                         </>
                       ))}
                       <td className="border-2 border-foreground p-2 text-xs">{row.remarks || '-'}</td>
                     </tr>
                   ))}
-                  {/* Totals Row */}
+                  {/* Subtotal Row */}
+                  <tr className="bg-muted/50">
+                    <td colSpan={3} className="border-2 border-foreground p-3 text-right font-semibold">Subtotal:</td>
+                    {vendors.map((vendor, index) => (
+                      <>
+                        <td key={`${vendor.id}-subtotal-qty`} className="border-2 border-foreground"></td>
+                        <td key={`${vendor.id}-subtotal-price`} className="border-2 border-foreground"></td>
+                        <td key={`${vendor.id}-subtotal-amount`} className="border-2 border-foreground p-3 text-right font-semibold">
+                          {getVendorSubtotal(index).toFixed(3)} BHD
+                        </td>
+                        <td key={`${vendor.id}-subtotal-vat`} className="border-2 border-foreground"></td>
+                        <td key={`${vendor.id}-subtotal-total`} className="border-2 border-foreground"></td>
+                      </>
+                    ))}
+                    <td className="border-2 border-foreground"></td>
+                  </tr>
+                  {/* VAT Row */}
+                  <tr className="bg-muted/30">
+                    <td colSpan={3} className="border-2 border-foreground p-3 text-right font-semibold">Total VAT ({settings.defaultVat}%):</td>
+                    {vendors.map((vendor, index) => (
+                      <>
+                        <td key={`${vendor.id}-vat-qty`} className="border-2 border-foreground"></td>
+                        <td key={`${vendor.id}-vat-price`} className="border-2 border-foreground"></td>
+                        <td key={`${vendor.id}-vat-subtotal`} className="border-2 border-foreground"></td>
+                        <td key={`${vendor.id}-vat-amount`} className="border-2 border-foreground p-3 text-right font-semibold">
+                          {getVendorVAT(index).toFixed(3)} BHD
+                        </td>
+                        <td key={`${vendor.id}-vat-total`} className="border-2 border-foreground"></td>
+                      </>
+                    ))}
+                    <td className="border-2 border-foreground"></td>
+                  </tr>
+                  {/* Grand Total Row */}
                   <tr className="bg-muted font-bold">
                     <td colSpan={3} className="border-2 border-foreground p-3 text-right uppercase">Grand Total:</td>
                     {vendors.map((vendor, index) => (
                       <>
                         <td key={`${vendor.id}-total-qty`} className="border-2 border-foreground"></td>
                         <td key={`${vendor.id}-total-price`} className="border-2 border-foreground"></td>
+                        <td key={`${vendor.id}-total-subtotal`} className="border-2 border-foreground"></td>
+                        <td key={`${vendor.id}-total-vat`} className="border-2 border-foreground"></td>
                         <td key={`${vendor.id}-total-amount`} className="border-2 border-foreground p-3 text-right text-lg">
                           {getVendorTotal(index).toFixed(3)} BHD
                         </td>
@@ -224,51 +280,40 @@ export default function PrintView({ rows, vendors, settings, currentUser, genera
               </div>
             )}
 
-            {/* Signature Section */}
-            <div className="mt-12 grid grid-cols-3 gap-8 pt-8 border-t-2 border-border">
-              <div className="text-center">
-                <div className="border-b-2 border-foreground pb-1 mb-2 h-20 flex items-end justify-center">
-                  {/* Signature space */}
+            {/* Approval Section - Only show for submitted/approved/rejected comparisons */}
+            {activeComparison && activeComparison.status !== 'draft' && (
+              <div className="mt-12 grid grid-cols-2 gap-8">
+                <div>
+                  <div className="border-b-2 border-foreground pb-2 mb-4">
+                    <p className="text-sm font-semibold uppercase">Prepared By:</p>
+                    <p className="text-base font-bold mt-2">{activeComparison.creator?.name || 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {activeComparison.createdAt ? new Date(activeComparison.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      }) : ''}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1 text-sm">
-                  <p className="font-bold">PREPARED BY</p>
-                  <p>{settings.makerName}</p>
-                  <p className="text-xs">Date: ______________</p>
-                </div>
+                {activeComparison.status !== 'submitted' && activeComparison.reviewer && (
+                  <div>
+                    <div className="border-b-2 border-foreground pb-2 mb-4">
+                      <p className="text-sm font-semibold uppercase">Checked By:</p>
+                      <p className="text-base font-bold mt-2">{activeComparison.reviewer?.name || 'N/A'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {activeComparison.reviewedAt ? new Date(activeComparison.reviewedAt).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        }) : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="text-center">
-                <div className="border-b-2 border-foreground pb-1 mb-2 h-20 flex items-end justify-center">
-                  {settings.checkerSignature && (
-                    <img 
-                      src={settings.checkerSignature} 
-                      alt="Signature" 
-                      className="h-full object-contain"
-                    />
-                  )}
-                </div>
-                <div className="space-y-1 text-sm">
-                  <p className="font-bold">CHECKED BY</p>
-                  <p>{settings.checkerName}</p>
-                  <p className="text-xs">Date: ______________</p>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="border-b-2 border-foreground pb-1 mb-2 h-20 flex items-end justify-center">
-                  {/* Signature space */}
-                </div>
-                <div className="space-y-1 text-sm">
-                  <p className="font-bold">APPROVED BY</p>
-                  <p>_________________</p>
-                  <p className="text-xs">Date: ______________</p>
-                </div>
-              </div>
-            </div>
+            )}
 
-            {/* Footer */}
-            <div className="mt-8 pt-4 border-t border-border text-center text-xs text-muted-foreground">
-              <p>This is an official document generated by {settings.companyName} Procurement System</p>
-              <p>Document Reference: {settings.reqNo} | Generated on: {currentDate}</p>
-            </div>
           </div>
         </CardContent>
       </Card>

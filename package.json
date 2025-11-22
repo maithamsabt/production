@@ -15,7 +15,9 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:init": "tsx scripts/init-db.ts"
+    "db:init": "tsx scripts/init-db.ts",
+    "db:migrate": "tsx scripts/migrate-db.ts",
+    "db:migrate-checker": "tsx scripts/migrate-checker.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",

@@ -34,6 +34,7 @@ export const items = pgTable('items', {
   specification: text('specification').notNull(),
   unit: varchar('unit', { length: 50 }).notNull(),
   category: varchar('category', { length: 100 }).notNull(),
+  isVatable: boolean('is_vatable').notNull().default(true),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });

@@ -5,6 +5,7 @@ export { usersAPI } from './users';
 export { vendorsAPI } from './vendors';
 export { itemsAPI } from './items';
 export { settingsAPI } from './settings';
+export { comparisonsAPI } from './comparisons';
 export type { LoginResponse, SessionResponse } from './auth';
 export type { CreateUserRequest, UpdateUserRequest } from './users';
 export type { Settings } from './settings';

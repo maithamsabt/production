@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { Item, UOMType } from '@/lib/types';
 import { itemsAPI } from '@/lib/api';
@@ -25,7 +27,8 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
     description: '',
     specification: '',
     unit: 'NOS',
-    category: ''
+    category: '',
+    isVatable: true
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -63,7 +66,8 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
         description: '',
         specification: '',
         unit: 'NOS',
-        category: ''
+        category: '',
+        isVatable: true
       });
       toast.success('Item added successfully');
     } catch (error: any) {
@@ -211,6 +215,16 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
                 className="min-h-[80px]"
               />
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="vatable"
+                checked={newItem.isVatable}
+                onCheckedChange={(checked) => setNewItem({ ...newItem, isVatable: checked as boolean })}
+              />
+              <Label htmlFor="vatable" className="text-sm font-medium cursor-pointer">
+                Subject to VAT
+              </Label>
+            </div>
           </div>
           <div className="mt-4">
             <Button onClick={addItem} disabled={!newItem.name.trim()}>
@@ -234,6 +248,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
                   <TableHead>Description</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>UOM</TableHead>
+                  <TableHead>VAT</TableHead>
                   <TableHead>Specification</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -291,6 +306,20 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
                     </TableCell>
                     <TableCell>
                       <Badge>{item.unit}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {editingId === item.id ? (
+                        <Checkbox
+                          checked={editingItem?.isVatable || false}
+                          onCheckedChange={(checked) => setEditingItem(prev => 
+                            prev ? { ...prev, isVatable: checked as boolean } : null
+                          )}
+                        />
+                      ) : (
+                        <Badge variant={item.isVatable ? 'default' : 'secondary'}>
+                          {item.isVatable ? 'Yes' : 'No'}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {editingId === item.id ? (

@@ -5,33 +5,35 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   BarChart3,
-  History,
   Package,
   Building,
   Paperclip,
   Printer,
-  PenTool,
   Users,
   Settings as SettingsIcon,
-  LogOut
+  LogOut,
+  ClipboardCheck,
+  AlertCircle,
+  Plus
 } from 'lucide-react';
 
 import LoginForm from '@/components/LoginForm';
 import ComparisonTable from '@/components/ComparisonTable';
-import ComparisonHistory from '@/components/ComparisonHistory';
 import ItemManagement from '@/components/ItemManagement';
 import VendorManagement from '@/components/VendorManagement';
 import AttachmentManager from '@/components/AttachmentManager';
 import PrintView from '@/components/PrintView';
 import UserManagement from '@/components/UserManagement';
 import Settings from '@/components/Settings';
+import CheckerReview from '@/components/CheckerReview';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 import { Vendor, Item, ComparisonRow, AppSettings } from '@/lib/types';
 import { authService } from '@/lib/auth';
-import { vendorsAPI, itemsAPI } from '@/lib/api';
+import { vendorsAPI, itemsAPI, comparisonsAPI } from '@/lib/api';
 import type { User } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const remapRowsForVendors = (
   rows: ComparisonRow[],
@@ -81,6 +83,10 @@ export default function Index() {
   const [items, setItems] = useState<Item[]>([]);
   const [rows, setRows] = useState<ComparisonRow[]>([]);
   const [generalComments, setGeneralComments] = useState('');
+  
+  // Active comparison state
+  const [activeComparisonId, setActiveComparisonId] = useState<string | null>(null);
+  const [comparisons, setComparisons] = useState<any[]>([]);
 
   const [settings, setSettings] = useState<AppSettings>({
     companyName: 'Your Company Name',
@@ -100,19 +106,75 @@ export default function Index() {
   // Load data from database
   const loadDataFromDatabase = async () => {
     try {
-      const [vendorsData, itemsData] = await Promise.all([
+      const [vendorsData, itemsData, comparisonsData] = await Promise.all([
         vendorsAPI.getAll(),
         itemsAPI.getAll(),
+        comparisonsAPI.getAll(),
       ]);
       
       setVendors(vendorsData);
       setItems(itemsData);
-      
-      // TODO: Load comparisons, history, attachments, and settings from database
-      // For now, initialize with empty arrays
+      setComparisons(comparisonsData);
     } catch (error) {
       console.error('Failed to load data from database:', error);
     }
+  };
+
+  const loadComparison = async (id: string) => {
+    try {
+      const comparison = await comparisonsAPI.getById(id);
+      setActiveComparisonId(id);
+      
+      // Load comparison data into the form
+      const comparisonVendorIds = comparison.vendors?.map((v: any) => v.id) || [];
+      setSelectedVendorIds(comparisonVendorIds);
+      
+      // Map comparison rows to form rows
+      const formRows = comparison.rows?.map((row: any) => ({
+        id: row.id,
+        srl: row.srl,
+        itemId: row.itemId,
+        item: row.item,
+        description: row.description,
+        qty: row.qty,
+        uom: row.uom,
+        quantities: row.quantities || [],
+        prices: row.prices || [],
+        vendor1UnitPrice: 0,
+        vendor1Vat: 0,
+        vendor1Total: 0,
+        vendor2UnitPrice: 0,
+        vendor2Vat: 0,
+        vendor2Total: 0,
+        vendor3UnitPrice: 0,
+        vendor3Vat: 0,
+        vendor3Total: 0,
+        selectedVendorIndex: row.selectedVendorIndex,
+        remarks: row.remarks || '',
+        comment: row.comment || '',
+      })) || [];
+      
+      setRows(formRows);
+      setGeneralComments(comparison.generalComments || '');
+      
+      setSettings(prev => ({
+        ...prev,
+        reqNo: comparison.requestNumber,
+        purpose: comparison.title,
+      }));
+    } catch (error) {
+      console.error('Failed to load comparison:', error);
+    }
+  };
+
+  const createNewComparison = () => {
+    setActiveComparisonId(null);
+    setRows([]);
+    setGeneralComments('');
+    
+    // Auto-select first 3 vendors as default
+    const defaultVendorIds = vendors.slice(0, Math.min(3, vendors.length)).map(v => v.id);
+    setSelectedVendorIds(defaultVendorIds);
   };
 
   const handleVendorSelectionChange = useCallback((nextVendorIds: string[]) => {
@@ -214,12 +276,11 @@ export default function Index() {
 
   const tabItems = [
     { id: 'comparison', label: 'Comparison', icon: BarChart3, show: true },
-    { id: 'history', label: 'History', icon: History, show: permissions.canViewHistory },
+    { id: 'review', label: 'Review', icon: ClipboardCheck, show: currentUser.role === 'checker' || currentUser.role === 'admin' },
     { id: 'items', label: 'Items', icon: Package, show: permissions.canManageItems },
     { id: 'vendors', label: 'Vendors', icon: Building, show: permissions.canManageVendors },
     { id: 'attachments', label: 'Attachments', icon: Paperclip, show: permissions.canManageAttachments },
     { id: 'print', label: 'Print', icon: Printer, show: permissions.canPrint },
-    { id: 'signature', label: 'Signature', icon: PenTool, show: true },
     { id: 'users', label: 'Users', icon: Users, show: permissions.canViewUsers },
     { id: 'settings', label: 'Settings', icon: SettingsIcon, show: permissions.canEditSettings }
   ].filter(tab => tab.show);
@@ -270,6 +331,68 @@ export default function Index() {
           </TabsList>
 
           <TabsContent value="comparison" className="space-y-6">
+            <Card className="shadow-lg border-2 backdrop-blur-sm bg-card/95">
+              <CardHeader className="border-b bg-muted/30">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-xl font-semibold">
+                    {activeComparisonId ? (
+                      comparisons.find(c => c.id === activeComparisonId)?.status === 'draft' 
+                        ? 'Edit Comparison' 
+                        : 'View Comparison (Read-Only)'
+                    ) : 'New Comparison'}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="default" 
+                      onClick={createNewComparison}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create New (3 Vendors)
+                    </Button>
+                    <select
+                      className="px-3 py-2 border rounded-md min-w-[300px]"
+                      value={activeComparisonId || ''}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          loadComparison(e.target.value);
+                        } else {
+                          createNewComparison();
+                        }
+                      }}
+                    >
+                      <option value="">-- New Comparison --</option>
+                      <optgroup label="Draft (Editable)">
+                        {comparisons.filter(c => c.status === 'draft').map((comp) => (
+                          <option key={comp.id} value={comp.id}>
+                            {comp.requestNumber} - {comp.title}
+                          </option>
+                        ))}
+                      </optgroup>
+                      {(currentUser.role === 'checker' || currentUser.role === 'admin') && (
+                        <>
+                          <optgroup label="In Process (View Only)">
+                            {comparisons.filter(c => c.status === 'submitted').map((comp) => (
+                              <option key={comp.id} value={comp.id}>
+                                {comp.requestNumber} - {comp.title}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Processed (View Only)">
+                            {comparisons.filter(c => ['approved', 'rejected'].includes(c.status)).map((comp) => (
+                              <option key={comp.id} value={comp.id}>
+                                {comp.requestNumber} - {comp.title} ({comp.status})
+                              </option>
+                            ))}
+                          </optgroup>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+            
             <ComparisonTable
               rows={rows}
               items={items}
@@ -280,12 +403,20 @@ export default function Index() {
               onRemoveVendor={handleRemoveVendor}
               generalComments={generalComments}
               onGeneralCommentsChange={setGeneralComments}
+              requestNumber={settings.reqNo}
+              title={settings.purpose}
+              currentComparisonId={activeComparisonId}
+              comparisonStatus={comparisons.find(c => c.id === activeComparisonId)?.status}
+              onComparisonSaved={(id) => {
+                setActiveComparisonId(id);
+                loadDataFromDatabase();
+              }}
             />
           </TabsContent>
 
-          {permissions.canViewHistory && (
-            <TabsContent value="history" className="space-y-6">
-              <ComparisonHistory
+          {(currentUser.role === 'checker' || currentUser.role === 'admin') && (
+            <TabsContent value="review" className="space-y-6">
+              <CheckerReview
                 currentUser={currentUser}
               />
             </TabsContent>
@@ -319,29 +450,30 @@ export default function Index() {
 
           {permissions.canPrint && (
             <TabsContent value="print" className="space-y-6">
-              <PrintView
-                rows={rows}
-                vendors={selectedVendors}
-                settings={settings}
-                currentUser={currentUser}
-                generalComments={generalComments}
-              />
+              {activeComparisonId ? (
+                <PrintView
+                  rows={rows}
+                  vendors={selectedVendors}
+                  settings={settings}
+                  currentUser={currentUser}
+                  generalComments={generalComments}
+                  activeComparison={comparisons.find(c => c.id === activeComparisonId)}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="pt-6">
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No Comparison Selected</AlertTitle>
+                      <AlertDescription>
+                        Please select or create a comparison to view the print preview.
+                      </AlertDescription>
+                    </Alert>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           )}
-
-          <TabsContent value="signature" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PenTool className="h-5 w-5" />
-                  Digital Signature
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Signature upload functionality will be implemented here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {permissions.canViewUsers && (
             <TabsContent value="users" className="space-y-6">

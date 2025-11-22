@@ -41,7 +41,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // Create item
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { name, description, specification, unit, category, isActive } = req.body;
+    const { name, description, specification, unit, category, isActive, isVatable } = req.body;
 
     if (!name || !description || !specification || !unit || !category) {
       return res.status(400).json({ error: 'All required fields must be provided' });
@@ -53,6 +53,7 @@ router.post('/', authenticate, async (req, res) => {
       specification,
       unit,
       category,
+      isVatable: isVatable !== undefined ? isVatable : true,
       isActive: isActive !== undefined ? isActive : true,
     }).returning();
 
@@ -66,7 +67,7 @@ router.post('/', authenticate, async (req, res) => {
 // Update item
 router.put('/:id', authenticate, async (req, res) => {
   try {
-    const { name, description, specification, unit, category, isActive } = req.body;
+    const { name, description, specification, unit, category, isActive, isVatable } = req.body;
 
     const updates: any = {};
     if (name !== undefined) updates.name = name;
@@ -74,6 +75,7 @@ router.put('/:id', authenticate, async (req, res) => {
     if (specification !== undefined) updates.specification = specification;
     if (unit !== undefined) updates.unit = unit;
     if (category !== undefined) updates.category = category;
+    if (isVatable !== undefined) updates.isVatable = isVatable;
     if (isActive !== undefined) updates.isActive = isActive;
 
     const [updatedItem] = await db.update(items)

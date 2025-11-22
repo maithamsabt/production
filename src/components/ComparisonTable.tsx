@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Trash2, Calculator, X } from 'lucide-react';
+import { Plus, Trash2, Calculator, X, Send, AlertCircle } from 'lucide-react';
 import { ComparisonRow, Item, Vendor } from '@/lib/types';
+import { toast } from '@/components/ui/use-toast';
+import { comparisonsAPI } from '@/lib/api/comparisons';
 
 interface ComparisonTableProps {
   rows: ComparisonRow[];
@@ -20,6 +22,11 @@ interface ComparisonTableProps {
   onRemoveVendor: (vendorId: string) => void;
   generalComments: string;
   onGeneralCommentsChange: (comments: string) => void;
+  currentComparisonId?: string | null;
+  requestNumber?: string;
+  title?: string;
+  comparisonStatus?: string;
+  onComparisonSaved?: (id: string) => void;
 }
 
 export default function ComparisonTable({
@@ -31,9 +38,19 @@ export default function ComparisonTable({
   onAddVendor,
   onRemoveVendor,
   generalComments,
-  onGeneralCommentsChange
+  onGeneralCommentsChange,
+  currentComparisonId,
+  requestNumber,
+  title,
+  comparisonStatus,
+  onComparisonSaved
 }: ComparisonTableProps) {
   const [showCalculations, setShowCalculations] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Determine if comparison is readonly (processed or in-process)
+  const isReadonly = Boolean(comparisonStatus && comparisonStatus !== 'draft');
 
   const addRow = () => {
     if (!vendors.length) {
@@ -74,20 +91,165 @@ export default function ComparisonTable({
     onRowsChange(rows.filter(row => row.id !== id));
   };
 
+  const handleSaveComparison = async () => {
+    if (rows.length === 0) {
+      toast({
+        title: "Cannot save",
+        description: "Please add at least one item to the comparison.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (vendors.length === 0) {
+      toast({
+        title: "Cannot save",
+        description: "Please select at least one vendor.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const comparisonData = {
+        requestNumber: requestNumber || `REQ-${Date.now()}`,
+        title: title || 'Price Comparison',
+        selectedVendors: vendors.map(v => v.id),
+        rows: rows.map(row => ({
+          itemId: row.itemId,
+          quantities: row.quantities,
+          prices: row.prices,
+          remarks: row.remarks,
+        })),
+        generalComments,
+        status: 'draft',
+      };
+
+      let comparisonId = currentComparisonId;
+      
+      if (comparisonId) {
+        await comparisonsAPI.update(comparisonId, comparisonData);
+        toast({
+          title: "Comparison updated",
+          description: "Your changes have been saved successfully.",
+        });
+      } else {
+        const created = await comparisonsAPI.create(comparisonData);
+        comparisonId = created.id;
+        if (onComparisonSaved && comparisonId) {
+          onComparisonSaved(comparisonId);
+        }
+        toast({
+          title: "Comparison created",
+          description: "Your comparison has been saved successfully.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Save failed",
+        description: error.message || "Failed to save the comparison. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSubmitToChecker = async () => {
+    if (!currentComparisonId) {
+      toast({
+        title: "Cannot submit",
+        description: "Please save the comparison first before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (rows.length === 0) {
+      toast({
+        title: "Cannot submit",
+        description: "Please add at least one item to the comparison.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (vendors.length === 0) {
+      toast({
+        title: "Cannot submit",
+        description: "Please select at least one vendor.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const invalidRows = rows.filter(row => !row.itemId);
+    if (invalidRows.length > 0) {
+      toast({
+        title: "Cannot submit",
+        description: "Please select items for all rows.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // First save any pending changes
+      await handleSaveComparison();
+      
+      // Then submit for review
+      await comparisonsAPI.submit(currentComparisonId);
+
+      toast({
+        title: "Successfully submitted",
+        description: "The invoice has been submitted to the checker for review.",
+      });
+      
+      if (onComparisonSaved) {
+        onComparisonSaved(currentComparisonId);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Submission failed",
+        description: error.message || "Failed to submit the invoice. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {isReadonly && (
+        <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Read-Only Mode</AlertTitle>
+          <AlertDescription>
+            This comparison is {comparisonStatus === 'submitted' ? 'in review' : comparisonStatus}. 
+            You can view and print it, but editing is not allowed.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Card className="shadow-lg border-2 backdrop-blur-sm bg-card/95">
         <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/30">
-          <CardTitle className="text-xl font-semibold">Price Comparison Table</CardTitle>
+          <CardTitle className="text-xl font-semibold">
+            {isReadonly ? 'Price Comparison Table (Read-Only)' : 'Price Comparison Table'}
+          </CardTitle>
           <div className="flex space-x-2">
             <Button onClick={() => setShowCalculations(!showCalculations)} variant="outline" className="gap-2 shadow-sm">
               <Calculator className="h-4 w-4" />
               {showCalculations ? 'Hide' : 'Show'} Calculations
             </Button>
-            <Button onClick={addRow} disabled={!vendors.length} title={!vendors.length ? 'Select at least one vendor to start comparing' : undefined} className="gap-2 shadow-sm">
-              <Plus className="h-4 w-4" />
-              Add Row
-            </Button>
+            {!isReadonly && (
+              <Button onClick={addRow} disabled={!vendors.length} title={!vendors.length ? 'Select at least one vendor to start comparing' : undefined} className="gap-2 shadow-sm">
+                <Plus className="h-4 w-4" />
+                Add Row
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -111,48 +273,51 @@ export default function ComparisonTable({
                         <div className="space-y-1">
                           <div className="flex items-center justify-center gap-1">
                             <span className="font-semibold text-sm">{vendor.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onRemoveVendor(vendor.id)}
-                              className="h-5 w-5 p-0 hover:bg-destructive hover:text-destructive-foreground rounded-full transition-all"
-                              title="Remove vendor"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+                            {!isReadonly && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onRemoveVendor(vendor.id)}
+                                className="h-5 w-5 p-0 hover:bg-destructive hover:text-destructive-foreground rounded-full transition-all"
+                                title="Remove vendor"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                           <div className="text-xs text-gray-500">Qty | Price</div>
                         </div>
                       </TableHead>
                     ))}
-                    <TableHead className="text-center min-w-[80px]">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform shadow-sm"
-                            title="Add vendor"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-56 p-2 shadow-xl" align="start">
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold mb-2 px-2">Add Vendor</p>
-                            {allVendors
-                              .filter((v) => !vendors.find((sv) => sv.id === v.id))
-                              .map((vendor) => (
-                                <Button
-                                  key={vendor.id}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full justify-start hover:bg-primary/10 transition-colors"
-                                  onClick={() => onAddVendor(vendor.id)}
-                                >
-                                  {vendor.name}
-                                </Button>
-                              ))}
+                    {!isReadonly && (
+                      <TableHead className="text-center min-w-[80px]">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform shadow-sm"
+                              title="Add vendor"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-2 shadow-xl" align="start">
+                            <div className="space-y-1">
+                              <p className="text-sm font-semibold mb-2 px-2">Add Vendor</p>
+                              {allVendors
+                                .filter((v) => !vendors.find((sv) => sv.id === v.id))
+                                .map((vendor) => (
+                                  <Button
+                                    key={vendor.id}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start hover:bg-primary/10 transition-colors"
+                                    onClick={() => onAddVendor(vendor.id)}
+                                  >
+                                    {vendor.name}
+                                  </Button>
+                                ))}
                             {allVendors.filter((v) => !vendors.find((sv) => sv.id === v.id)).length === 0 && (
                               <p className="text-sm text-muted-foreground py-2">All vendors added</p>
                             )}
@@ -160,8 +325,11 @@ export default function ComparisonTable({
                         </PopoverContent>
                       </Popover>
                     </TableHead>
+                    )}
                     <TableHead className="border-r border-t border-l bg-muted/50 font-semibold">Remarks</TableHead>
-                    <TableHead className="border-r border-t bg-muted/50 font-semibold">Actions</TableHead>
+                    {!isReadonly && (
+                      <TableHead className="border-r border-t bg-muted/50 font-semibold">Actions</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -176,6 +344,7 @@ export default function ComparisonTable({
                               updateRow(row.id, { itemId: value, item: selectedItem });
                             }
                           }}
+                          disabled={isReadonly}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select item" />
@@ -212,6 +381,7 @@ export default function ComparisonTable({
                                 updateRow(row.id, { quantities: newQuantities });
                               }}
                               className="text-center"
+                              disabled={isReadonly}
                             />
                             <Input
                               type="number"
@@ -223,6 +393,7 @@ export default function ComparisonTable({
                                 updateRow(row.id, { prices: newPrices });
                               }}
                               className="text-center"
+                              disabled={isReadonly}
                             />
                             {showCalculations && (
                               <div className="text-xs text-gray-600 font-medium">
@@ -232,26 +403,31 @@ export default function ComparisonTable({
                           </div>
                         </TableCell>
                       ))}
-                      <TableCell className="text-center border-r border-l">
-                        {/* Empty cell for + vendor column */}
-                      </TableCell>
+                      {!isReadonly && (
+                        <TableCell className="text-center border-r border-l">
+                          {/* Empty cell for + vendor column */}
+                        </TableCell>
+                      )}
                       <TableCell className="border-r">
                         <Textarea
                           placeholder="Add remarks..."
                           value={row.remarks}
                           onChange={(e) => updateRow(row.id, { remarks: e.target.value })}
                           className="min-h-[60px]"
+                          disabled={isReadonly}
                         />
                       </TableCell>
-                      <TableCell className="border-r">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteRow(row.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                      {!isReadonly && (
+                        <TableCell className="border-r">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteRow(row.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -271,9 +447,63 @@ export default function ComparisonTable({
             value={generalComments}
             onChange={(e) => onGeneralCommentsChange(e.target.value)}
             className="min-h-[100px] resize-none focus-visible:ring-2"
+            disabled={isReadonly}
           />
         </CardContent>
       </Card>
+
+      {!isReadonly ? (
+        <Card className="shadow-lg border-2 backdrop-blur-sm bg-card/95 bg-gradient-to-r from-primary/5 to-primary/10">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold">Ready to submit?</h3>
+                <p className="text-sm text-muted-foreground">
+                  {currentComparisonId 
+                    ? "Save changes and submit this invoice to the checker for review and approval."
+                    : "Save this comparison first, then submit it to the checker for review."}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSaveComparison}
+                  disabled={isSaving || rows.length === 0 || vendors.length === 0}
+                  size="lg"
+                  variant="outline"
+                  className="gap-2 shadow-lg hover:shadow-xl transition-all"
+                >
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+                <Button
+                  onClick={handleSubmitToChecker}
+                  disabled={isSubmitting || isSaving || !currentComparisonId || rows.length === 0 || vendors.length === 0}
+                  size="lg"
+                  className="gap-2 shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Send className="h-5 w-5" />
+                  {isSubmitting ? "Submitting..." : "Submit to Checker"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="shadow-lg border-2 backdrop-blur-sm bg-card/95">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold">Comparison Status</h3>
+                <p className="text-sm text-muted-foreground">
+                  This comparison is <span className="font-semibold capitalize">{comparisonStatus}</span>. 
+                  {comparisonStatus === 'submitted' && ' Waiting for checker review.'}
+                  {comparisonStatus === 'approved' && ' It has been approved.'}
+                  {comparisonStatus === 'rejected' && ' It has been rejected.'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
