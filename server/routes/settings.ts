@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db';
 import { settings } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
@@ -50,7 +51,7 @@ router.put('/', authenticate, authorize('admin'), async (req: any, res) => {
       // Update existing
       [result] = await db.update(settings)
         .set(updates)
-        .where(db.$with('settings').id.eq(settingsRecord.id))
+        .where(eq(settings.id, settingsRecord.id))
         .returning();
     } else {
       // Create new

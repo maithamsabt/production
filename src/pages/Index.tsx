@@ -32,7 +32,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 
 import { Vendor, Item, ComparisonRow, AppSettings } from '@/lib/types';
 import { authService } from '@/lib/auth';
-import { vendorsAPI, itemsAPI, comparisonsAPI } from '@/lib/api';
+import { vendorsAPI, itemsAPI, comparisonsAPI, settingsAPI } from '@/lib/api';
 import type { User } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -108,15 +108,32 @@ export default function Index() {
   // Load data from database
   const loadDataFromDatabase = async () => {
     try {
-      const [vendorsData, itemsData, comparisonsData] = await Promise.all([
+      const [vendorsData, itemsData, comparisonsData, settingsData] = await Promise.all([
         vendorsAPI.getAll(),
         itemsAPI.getAll(),
         comparisonsAPI.getAll(),
+        settingsAPI.get(),
       ]);
       
       setVendors(vendorsData);
       setItems(itemsData);
       setComparisons(comparisonsData);
+      
+      // Update settings from database
+      setSettings({
+        companyName: settingsData.companyName,
+        companyAddress: settingsData.companyAddress,
+        companyPhone: settingsData.companyPhone,
+        companyEmail: settingsData.companyEmail,
+        defaultVat: parseFloat(settingsData.defaultVat),
+        reqNo: '',
+        date: '',
+        makerName: '',
+        checkerName: '',
+        checkerSignature: settingsData.checkerSignature || '',
+        purpose: 'Procurement Comparison',
+        requestNumber: ''
+      });
     } catch (error) {
       console.error('Failed to load data from database:', error);
     }
@@ -523,6 +540,7 @@ export default function Index() {
               <Settings
                 settings={settings}
                 onSettingsChange={setSettings}
+                onSettingsSaved={loadDataFromDatabase}
               />
             </TabsContent>
           )}

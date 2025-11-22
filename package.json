@@ -16,6 +16,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:init": "tsx scripts/init-db.ts",
+    "db:init-settings": "tsx scripts/init-settings.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
     "db:migrate-checker": "tsx scripts/migrate-checker.ts",
     "db:reset-comparisons": "tsx scripts/reset-comparisons.ts"

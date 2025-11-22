@@ -7,15 +7,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Settings as SettingsIcon, Save, RotateCcw } from 'lucide-react';
 import { AppSettings } from '@/lib/types';
+import { settingsAPI } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface SettingsProps {
   settings: AppSettings;
   onSettingsChange: (settings: AppSettings) => void;
+  onSettingsSaved?: () => void;
 }
 
-export default function Settings({ settings, onSettingsChange }: SettingsProps) {
+export default function Settings({ settings, onSettingsChange, onSettingsSaved }: SettingsProps) {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleChange = (field: keyof AppSettings, value: string | number) => {
     const newSettings = { ...localSettings, [field]: value };
@@ -23,9 +27,32 @@ export default function Settings({ settings, onSettingsChange }: SettingsProps) 
     setHasChanges(true);
   };
 
-  const handleSave = () => {
-    onSettingsChange(localSettings);
-    setHasChanges(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await settingsAPI.update({
+        companyName: localSettings.companyName,
+        companyAddress: localSettings.companyAddress,
+        companyPhone: localSettings.companyPhone,
+        companyEmail: localSettings.companyEmail,
+        defaultVat: localSettings.defaultVat.toString(),
+        checkerSignature: localSettings.checkerSignature || null,
+      });
+      
+      onSettingsChange(localSettings);
+      setHasChanges(false);
+      toast.success('Settings saved successfully');
+      
+      // Reload settings from database
+      if (onSettingsSaved) {
+        onSettingsSaved();
+      }
+    } catch (error: any) {
+      console.error('Failed to save settings:', error);
+      toast.error(error.message || 'Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -177,10 +204,10 @@ export default function Settings({ settings, onSettingsChange }: SettingsProps) 
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!hasChanges}
+              disabled={!hasChanges || isSaving}
             >
               <Save className="h-4 w-4 mr-2" />
-              Save Settings
+              {isSaving ? 'Saving...' : 'Save Settings'}
             </Button>
           </div>
         </CardContent>
