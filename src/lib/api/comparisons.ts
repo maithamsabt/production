@@ -13,7 +13,7 @@ export const comparisonsAPI = {
   },
 
   async getById(id: string) {
-    const response = await fetch(`${API_BASE}/comparisons/${id}`, {
+    const response = await fetch(`${API_BASE}/comparisons?id=${id}`, {
       credentials: 'include',
     });
     if (!response.ok) {
@@ -38,7 +38,7 @@ export const comparisonsAPI = {
   },
 
   async update(id: string, data: any) {
-    const response = await fetch(`${API_BASE}/comparisons/${id}`, {
+    const response = await fetch(`${API_BASE}/comparisons?id=${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -52,7 +52,7 @@ export const comparisonsAPI = {
   },
 
   async submit(id: string) {
-    const response = await fetch(`${API_BASE}/comparisons/${id}/submit`, {
+    const response = await fetch(`${API_BASE}/comparisons?id=${id}&action=submit`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -64,7 +64,7 @@ export const comparisonsAPI = {
   },
 
   async approve(id: string) {
-    const response = await fetch(`${API_BASE}/comparisons/${id}/approve`, {
+    const response = await fetch(`${API_BASE}/comparisons?id=${id}&action=approve`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -76,7 +76,7 @@ export const comparisonsAPI = {
   },
 
   async reject(id: string, rejectionReason: string) {
-    const response = await fetch(`${API_BASE}/comparisons/${id}/reject`, {
+    const response = await fetch(`${API_BASE}/comparisons?id=${id}&action=reject`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -90,7 +90,7 @@ export const comparisonsAPI = {
   },
 
   async delete(id: string) {
-    const response = await fetch(`${API_BASE}/comparisons/${id}`, {
+    const response = await fetch(`${API_BASE}/comparisons?id=${id}`, {
       method: 'DELETE',
       credentials: 'include',
     });
@@ -101,3 +101,4 @@ export const comparisonsAPI = {
     return response.json();
   },
 };
+
