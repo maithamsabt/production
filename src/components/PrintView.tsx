@@ -83,6 +83,7 @@ export default function PrintView({ rows, vendors, settings, currentUser: _curre
               }
               .print-content table {
                 background: white !important;
+                width: 100%;
               }
               .print-content th,
               .print-content td {
@@ -99,18 +100,43 @@ export default function PrintView({ rows, vendors, settings, currentUser: _curre
                 background: #e5e7eb !important;
               }
               @page {
-                margin: 1.5cm;
-                size: A4;
+                margin: 1cm;
+                size: A3 landscape;
               }
               .page-break {
                 page-break-before: always;
               }
               table {
                 border-collapse: collapse !important;
+                page-break-inside: auto !important;
+                width: 100%;
+              }
+              tr {
+                page-break-inside: avoid !important;
+                page-break-after: auto !important;
+              }
+              thead {
+                display: table-header-group !important;
+              }
+              tbody {
+                display: table-row-group !important;
+              }
+              tfoot {
+                display: table-footer-group !important;
               }
               th, td {
                 border: 1px solid #000 !important;
-                padding: 8px !important;
+                padding: 4px 6px !important;
+                font-size: 10px !important;
+              }
+            }
+            
+            @media screen {
+              .print-content {
+                overflow-x: auto;
+              }
+              .print-content table {
+                min-width: max-content;
               }
             }
           `}</style>

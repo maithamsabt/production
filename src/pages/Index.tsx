@@ -369,23 +369,21 @@ export default function Index() {
                           </option>
                         ))}
                       </optgroup>
+                      <optgroup label="Submitted (View Only)">
+                        {comparisons.filter(c => c.status === 'submitted').map((comp) => (
+                          <option key={comp.id} value={comp.id}>
+                            {comp.requestNumber} - {comp.title}
+                          </option>
+                        ))}
+                      </optgroup>
                       {(currentUser.role === 'checker' || currentUser.role === 'admin') && (
-                        <>
-                          <optgroup label="In Process (View Only)">
-                            {comparisons.filter(c => c.status === 'submitted').map((comp) => (
-                              <option key={comp.id} value={comp.id}>
-                                {comp.requestNumber} - {comp.title}
-                              </option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="Processed (View Only)">
-                            {comparisons.filter(c => ['approved', 'rejected'].includes(c.status)).map((comp) => (
-                              <option key={comp.id} value={comp.id}>
-                                {comp.requestNumber} - {comp.title} ({comp.status})
-                              </option>
-                            ))}
-                          </optgroup>
-                        </>
+                        <optgroup label="Processed (View Only)">
+                          {comparisons.filter(c => ['approved', 'rejected'].includes(c.status)).map((comp) => (
+                            <option key={comp.id} value={comp.id}>
+                              {comp.requestNumber} - {comp.title} ({comp.status})
+                            </option>
+                          ))}
+                        </optgroup>
                       )}
                     </select>
                   </div>

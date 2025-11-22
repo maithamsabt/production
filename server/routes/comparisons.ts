@@ -7,20 +7,42 @@ import { authenticate } from '../middleware/auth';
 const router = Router();
 
 // Get all comparisons
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, async (req: any, res) => {
   try {
-    const allComparisons = await db.query.comparisons.findMany({
-      orderBy: (comparisons, { desc }) => [desc(comparisons.createdAt)],
-      with: {
-        creator: true,
-        reviewer: true,
-        rows: {
-          with: {
-            item: true,
+    const user = req.user;
+    let allComparisons;
+
+    // Checkers and admins can see all comparisons
+    // Regular users only see their own drafts + submitted/approved/rejected comparisons
+    if (user.role === 'checker' || user.role === 'admin') {
+      allComparisons = await db.query.comparisons.findMany({
+        orderBy: (comparisons, { desc }) => [desc(comparisons.createdAt)],
+        with: {
+          creator: true,
+          reviewer: true,
+          rows: {
+            with: {
+              item: true,
+            },
           },
         },
-      },
-    });
+      });
+    } else {
+      // Regular users only see their own comparisons (all statuses)
+      allComparisons = await db.query.comparisons.findMany({
+        where: (comparisons, { eq }) => eq(comparisons.createdBy, user.id),
+        orderBy: (comparisons, { desc }) => [desc(comparisons.createdAt)],
+        with: {
+          creator: true,
+          reviewer: true,
+          rows: {
+            with: {
+              item: true,
+            },
+          },
+        },
+      });
+    }
 
     res.json(allComparisons);
   } catch (error) {
