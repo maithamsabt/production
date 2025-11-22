@@ -48,9 +48,20 @@ export default function ComparisonTable({
   const [showCalculations, setShowCalculations] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [comparisonTitle, setComparisonTitle] = useState(title || '');
   
   // Determine if comparison is readonly (processed or in-process)
   const isReadonly = Boolean(comparisonStatus && comparisonStatus !== 'draft');
+  
+  // Auto-generate request number based on current date and time
+  const generateRequestNumber = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const timestamp = now.getTime();
+    return `REQ-${year}${month}${day}-${timestamp.toString().slice(-6)}`;
+  };
 
   const addRow = () => {
     if (!vendors.length) {
@@ -113,8 +124,8 @@ export default function ComparisonTable({
     setIsSaving(true);
     try {
       const comparisonData = {
-        requestNumber: requestNumber || `REQ-${Date.now()}`,
-        title: title || 'Price Comparison',
+        requestNumber: requestNumber || generateRequestNumber(),
+        title: comparisonTitle || 'Price Comparison',
         selectedVendors: vendors.map(v => v.id),
         rows: rows.map(row => ({
           itemId: row.itemId,
@@ -232,6 +243,28 @@ export default function ComparisonTable({
             You can view and print it, but editing is not allowed.
           </AlertDescription>
         </Alert>
+      )}
+      
+      {!isReadonly && (
+        <Card className="shadow-lg border-2 backdrop-blur-sm bg-card/95">
+          <CardHeader className="border-b bg-muted/30">
+            <CardTitle className="text-lg font-semibold">Comparison Details</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Comparison Title / Name</label>
+              <Input
+                type="text"
+                placeholder="e.g., Office Supplies Comparison Q4 2024"
+                value={comparisonTitle}
+                onChange={(e) => setComparisonTitle(e.target.value)}
+                disabled={isReadonly}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Request number will be auto-generated when you save</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
       
       <Card className="shadow-lg border-2 backdrop-blur-sm bg-card/95">

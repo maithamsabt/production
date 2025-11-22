@@ -14,8 +14,10 @@ import {
   LogOut,
   ClipboardCheck,
   AlertCircle,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import LoginForm from '@/components/LoginForm';
 import ComparisonTable from '@/components/ComparisonTable';
@@ -271,6 +273,31 @@ export default function Index() {
     );
   }
 
+  const handleDeleteComparison = async () => {
+    if (!activeComparisonId) return;
+    
+    const activeComparison = comparisons.find(c => c.id === activeComparisonId);
+    if (!activeComparison || activeComparison.status !== 'draft') {
+      toast.error('Only draft comparisons can be deleted');
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete "${activeComparison.title}"? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      await comparisonsAPI.delete(activeComparisonId);
+      toast.success('Comparison deleted successfully');
+      setActiveComparisonId(null);
+      createNewComparison();
+      await loadDataFromDatabase();
+    } catch (error: any) {
+      console.error('Failed to delete comparison:', error);
+      toast.error(error.message || 'Failed to delete comparison');
+    }
+  };
+
   const permissions = getPermissions(currentUser);
   const selectedVendors = vendors.filter((vendor) => selectedVendorIds.includes(vendor.id));
 
@@ -350,6 +377,16 @@ export default function Index() {
                       <Plus className="h-4 w-4" />
                       Create New (3 Vendors)
                     </Button>
+                    {activeComparisonId && comparisons.find(c => c.id === activeComparisonId)?.status === 'draft' && (
+                      <Button 
+                        variant="destructive" 
+                        onClick={handleDeleteComparison}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Draft
+                      </Button>
+                    )}
                     <select
                       className="px-3 py-2 border rounded-md min-w-[300px]"
                       value={activeComparisonId || ''}
