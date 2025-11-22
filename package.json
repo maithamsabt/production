@@ -17,7 +17,8 @@
     "db:studio": "drizzle-kit studio",
     "db:init": "tsx scripts/init-db.ts",
     "db:migrate": "tsx scripts/migrate-db.ts",
-    "db:migrate-checker": "tsx scripts/migrate-checker.ts"
+    "db:migrate-checker": "tsx scripts/migrate-checker.ts",
+    "db:reset-comparisons": "tsx scripts/reset-comparisons.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
