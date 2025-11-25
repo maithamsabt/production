@@ -93,6 +93,7 @@ export default function ItemManagement({ items, onItemsChange }: ItemManagementP
         specification: editingItem.specification,
         unit: editingItem.unit,
         category: editingItem.category,
+        isVatable: editingItem.isVatable,
         isActive: editingItem.isActive,
       });
       onItemsChange(items.map(item => 

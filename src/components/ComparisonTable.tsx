@@ -96,11 +96,57 @@ export default function ComparisonTable({
       remarks: '',
       comment: ''
     };
-    onRowsChange([...rows, newRow]);
+    const calculatedRow = calculateRowValues(newRow);
+    onRowsChange([...rows, calculatedRow]);
+  };
+
+  const calculateRowValues = (row: ComparisonRow): ComparisonRow => {
+    const isVatable = row.item?.isVatable !== undefined ? row.item.isVatable : true;
+    
+    // Vendor 1
+    const qty1 = row.quantities[0] || 0;
+    const price1 = row.prices[0] || 0;
+    const subtotal1 = qty1 * price1;
+    const vat1 = isVatable ? (vendors[0]?.vat || 0) / 100 : 0;
+    const vendor1Total = subtotal1 * (1 + vat1);
+    
+    // Vendor 2
+    const qty2 = row.quantities[1] || 0;
+    const price2 = row.prices[1] || 0;
+    const subtotal2 = qty2 * price2;
+    const vat2 = isVatable ? (vendors[1]?.vat || 0) / 100 : 0;
+    const vendor2Total = subtotal2 * (1 + vat2);
+    
+    // Vendor 3
+    const qty3 = row.quantities[2] || 0;
+    const price3 = row.prices[2] || 0;
+    const subtotal3 = qty3 * price3;
+    const vat3 = isVatable ? (vendors[2]?.vat || 0) / 100 : 0;
+    const vendor3Total = subtotal3 * (1 + vat3);
+    
+    return {
+      ...row,
+      vendor1UnitPrice: price1,
+      vendor1Vat: vat1,
+      vendor1Total,
+      vendor2UnitPrice: price2,
+      vendor2Vat: vat2,
+      vendor2Total,
+      vendor3UnitPrice: price3,
+      vendor3Vat: vat3,
+      vendor3Total,
+    };
   };
 
   const updateRow = (id: string, updates: Partial<ComparisonRow>) => {
-    onRowsChange(rows.map(row => row.id === id ? { ...row, ...updates } : row));
+    const updatedRows = rows.map(row => {
+      if (row.id === id) {
+        const updated = { ...row, ...updates };
+        return calculateRowValues(updated);
+      }
+      return row;
+    });
+    onRowsChange(updatedRows);
   };
 
   const deleteRow = (id: string) => {
@@ -139,6 +185,16 @@ export default function ComparisonTable({
           uom: row.item?.unit || row.uom || 'NOS',
           quantities: row.quantities,
           prices: row.prices,
+          vendor1UnitPrice: row.vendor1UnitPrice,
+          vendor1Vat: row.vendor1Vat,
+          vendor1Total: row.vendor1Total,
+          vendor2UnitPrice: row.vendor2UnitPrice,
+          vendor2Vat: row.vendor2Vat,
+          vendor2Total: row.vendor2Total,
+          vendor3UnitPrice: row.vendor3UnitPrice,
+          vendor3Vat: row.vendor3Vat,
+          vendor3Total: row.vendor3Total,
+          selectedVendorIndex: row.selectedVendorIndex,
           remarks: row.remarks || '',
           comment: row.comment || '',
         })),
@@ -383,7 +439,13 @@ export default function ComparisonTable({
                           onValueChange={(value) => {
                             const selectedItem = items.find(item => item.id === value);
                             if (selectedItem) {
-                              updateRow(row.id, { itemId: value, item: selectedItem });
+                              // Update item and recalculate VAT based on new item's isVatable status
+                              updateRow(row.id, { 
+                                itemId: value, 
+                                item: selectedItem,
+                                description: selectedItem.description,
+                                uom: selectedItem.unit
+                              });
                             }
                           }}
                           disabled={isReadonly}
@@ -438,8 +500,16 @@ export default function ComparisonTable({
                               disabled={isReadonly}
                             />
                             {showCalculations && (
-                              <div className="text-xs text-gray-600 font-medium">
-                                Total: {((row.quantities[vendorIndex] || 0) * (row.prices[vendorIndex] || 0)).toFixed(3)} BHD
+                              <div className="text-xs text-gray-600 font-medium space-y-1">
+                                <div>Subtotal: {((row.quantities[vendorIndex] || 0) * (row.prices[vendorIndex] || 0)).toFixed(3)} BHD</div>
+                                {row.item?.isVatable && (
+                                  <div className="text-green-600">+VAT: {(((row.quantities[vendorIndex] || 0) * (row.prices[vendorIndex] || 0)) * ((vendors[vendorIndex]?.vat || 0) / 100)).toFixed(3)} BHD</div>
+                                )}
+                                <div className="font-semibold border-t pt-1">Total: {
+                                  vendorIndex === 0 ? row.vendor1Total.toFixed(3) :
+                                  vendorIndex === 1 ? row.vendor2Total.toFixed(3) :
+                                  row.vendor3Total.toFixed(3)
+                                } BHD</div>
                               </div>
                             )}
                           </div>

@@ -20,9 +20,14 @@ export default function PrintView({ rows, vendors, settings, currentUser: _curre
   };
 
   const calculateVAT = (row: any, vendorIndex: number) => {
-    const total = calculateTotal(row, vendorIndex);
+    const subtotal = calculateTotal(row, vendorIndex);
     const isVatable = row.item?.isVatable !== undefined ? row.item.isVatable : true;
-    return isVatable ? total * (settings.defaultVat / 100) : 0;
+    if (!isVatable) return 0;
+    
+    // Use vendor-specific VAT rate, not default VAT
+    const vendor = vendors[vendorIndex];
+    const vatRate = vendor?.vat || 0;
+    return subtotal * (vatRate / 100);
   };
 
   const calculateTotalWithVAT = (row: any, vendorIndex: number) => {
@@ -266,14 +271,14 @@ export default function PrintView({ rows, vendors, settings, currentUser: _curre
                   </tr>
                   {/* VAT Row */}
                   <tr className="bg-muted/30">
-                    <td colSpan={3} className="border-2 border-foreground p-3 text-right font-semibold">Total VAT ({settings.defaultVat}%):</td>
+                    <td colSpan={3} className="border-2 border-foreground p-3 text-right font-semibold">Total VAT:</td>
                     {vendors.map((vendor, index) => (
                       <>
                         <td key={`${vendor.id}-vat-qty`} className="border-2 border-foreground"></td>
                         <td key={`${vendor.id}-vat-price`} className="border-2 border-foreground"></td>
                         <td key={`${vendor.id}-vat-subtotal`} className="border-2 border-foreground"></td>
                         <td key={`${vendor.id}-vat-amount`} className="border-2 border-foreground p-3 text-right font-semibold">
-                          {getVendorVAT(index).toFixed(3)} BHD
+                          {getVendorVAT(index).toFixed(3)} BHD {vendor.vat > 0 && `(${vendor.vat}%)`}
                         </td>
                         <td key={`${vendor.id}-vat-total`} className="border-2 border-foreground"></td>
                       </>
