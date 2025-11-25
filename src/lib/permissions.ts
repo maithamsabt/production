@@ -115,8 +115,9 @@ export function getPermissions(user: User, allUsers?: User[]): Permission {
     },
 
     // Resource management permissions
-    canManageVendors: true, // All roles can manage vendors
-    canManageItems: true, // All roles can manage items
+    // Only checker and admin can manage (create/update/delete) vendors and items
+    canManageVendors: role === 'checker' || role === 'admin',
+    canManageItems: role === 'checker' || role === 'admin',
     canManageAttachments: true, // All roles can manage attachments
 
     // Comparison permissions

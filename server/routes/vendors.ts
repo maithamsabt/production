@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../db';
 import { vendors } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
 
@@ -38,8 +38,8 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 });
 
-// Create vendor
-router.post('/', authenticate, async (req, res) => {
+// Create vendor (checker/admin only)
+router.post('/', authenticate, authorize('checker', 'admin'), async (req, res) => {
   try {
     const { name, contactPerson, email, phone, address, vat, isActive } = req.body;
 
@@ -64,8 +64,8 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-// Update vendor
-router.put('/:id', authenticate, async (req, res) => {
+// Update vendor (checker/admin only)
+router.put('/:id', authenticate, authorize('checker', 'admin'), async (req, res) => {
   try {
     const { name, contactPerson, email, phone, address, vat, isActive } = req.body;
 
@@ -94,8 +94,8 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 });
 
-// Delete vendor
-router.delete('/:id', authenticate, async (req, res) => {
+// Delete vendor (checker/admin only)
+router.delete('/:id', authenticate, authorize('checker', 'admin'), async (req, res) => {
   try {
     await db.delete(vendors).where(eq(vendors.id, req.params.id));
     res.json({ message: 'Vendor deleted successfully' });

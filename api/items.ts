@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    authenticate(req);
+  const user = authenticate(req);
 
     if (req.method === 'GET') {
       const id = req.query.id as string | undefined;
@@ -41,6 +41,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
+      if (!user || (user.role !== 'checker' && user.role !== 'admin')) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
       const { name, description, specification, unit, category } = req.body;
 
       if (!name || !description || !specification || !unit || !category) {
@@ -59,6 +62,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'PUT') {
+      if (!user || (user.role !== 'checker' && user.role !== 'admin')) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
       const id = req.query.id as string;
       const { name, description, specification, unit, category, isActive } = req.body;
 
@@ -83,6 +89,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'DELETE') {
+      if (!user || (user.role !== 'checker' && user.role !== 'admin')) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
       const id = req.query.id as string;
       await db.delete(items).where(eq(items.id, id));
       return res.status(200).json({ message: 'Item deleted successfully' });
