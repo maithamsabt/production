@@ -82,7 +82,10 @@ router.post('/login', async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      // Allow cookies to be sent in cross-site requests (required when frontend and API are on different origins)
+      sameSite: 'none',
+      // Optional: specify cookie domain for subdomain sharing (set COOKIE_DOMAIN in production env if needed)
+      domain: process.env.COOKIE_DOMAIN || undefined,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
