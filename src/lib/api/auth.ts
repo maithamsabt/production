@@ -16,14 +16,24 @@ class AuthAPI {
       username,
       password,
     });
-    
-    // Cookie is automatically set by the server
+
+    // Save token so we can fall back to Authorization header if cookie isn't available
+    try {
+      if (response.token) {
+        localStorage.setItem('api_token', response.token);
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
+
+    // Cookie is automatically set by the server; return user data
     return response.user;
   }
 
   async logout(): Promise<void> {
     await apiClient.post('/auth/logout');
-    // Cookie is automatically cleared by the server
+    // Clear stored token and cookie
+    try { localStorage.removeItem('api_token'); } catch (e) {}
   }
 
   async getCurrentUser(): Promise<User | null> {

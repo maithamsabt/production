@@ -28,8 +28,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(item);
     }
 
-    // Only checker/admin can modify items
-    if (!user || (user.role !== 'checker' && user.role !== 'admin')) {
+    // Maker, checker or admin can modify items
+    if (!user || (user.role !== 'maker' && user.role !== 'checker' && user.role !== 'admin')) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 

@@ -41,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
-      if (!user || (user.role !== 'checker' && user.role !== 'admin')) {
+      if (!user || (user.role !== 'maker' && user.role !== 'checker' && user.role !== 'admin')) {
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
       const { name, description, specification, unit, category } = req.body;
@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'PUT') {
-      if (!user || (user.role !== 'checker' && user.role !== 'admin')) {
+      if (!user || (user.role !== 'maker' && user.role !== 'checker' && user.role !== 'admin')) {
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
       const id = req.query.id as string;
@@ -89,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'DELETE') {
-      if (!user || (user.role !== 'checker' && user.role !== 'admin')) {
+      if (!user || (user.role !== 'maker' && user.role !== 'checker' && user.role !== 'admin')) {
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
       const id = req.query.id as string;

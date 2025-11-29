@@ -15,8 +15,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Clear the cookie
-  res.setHeader('Set-Cookie', 'token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  // Clear the cookie with the same attributes used when setting it
+  const cookieParts = [
+    'token=',
+    'Path=/',
+    'HttpOnly',
+    'Max-Age=0',
+  ];
+
+  // Use SameSite=None to match how login sets the cookie; add Secure in production
+  cookieParts.push('SameSite=None');
+  if (process.env.NODE_ENV === 'production') {
+    cookieParts.push('Secure');
+  }
+
+  res.setHeader('Set-Cookie', cookieParts.join('; '));
 
   res.status(200).json({ message: 'Logged out successfully' });
 }

@@ -38,8 +38,8 @@ router.get('/:id', authenticate, async (req, res) => {
   }
 });
 
-// Create item (checker/admin only)
-router.post('/', authenticate, authorize('checker', 'admin'), async (req, res) => {
+// Create item (maker/checker/admin only)
+router.post('/', authenticate, authorize('maker', 'checker', 'admin'), async (req, res) => {
   try {
     const { name, description, specification, unit, category, isActive, isVatable } = req.body;
 
@@ -64,8 +64,8 @@ router.post('/', authenticate, authorize('checker', 'admin'), async (req, res) =
   }
 });
 
-// Update item (checker/admin only)
-router.put('/:id', authenticate, authorize('checker', 'admin'), async (req, res) => {
+// Update item (maker/checker/admin only)
+router.put('/:id', authenticate, authorize('maker', 'checker', 'admin'), async (req, res) => {
   try {
     const { name, description, specification, unit, category, isActive, isVatable } = req.body;
 
@@ -94,8 +94,8 @@ router.put('/:id', authenticate, authorize('checker', 'admin'), async (req, res)
   }
 });
 
-// Delete item (checker/admin only)
-router.delete('/:id', authenticate, authorize('checker', 'admin'), async (req, res) => {
+// Delete item (maker/checker/admin only)
+router.delete('/:id', authenticate, authorize('maker', 'checker', 'admin'), async (req, res) => {
   try {
     await db.delete(items).where(eq(items.id, req.params.id));
     res.json({ message: 'Item deleted successfully' });

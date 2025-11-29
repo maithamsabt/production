@@ -64,8 +64,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
-    // Set HTTP-only cookie
-    res.setHeader('Set-Cookie', `token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`);
+    // Set HTTP-only cookie. Use SameSite=None and Secure in production so cookies
+    // can be sent cross-site when frontend and API are on different origins.
+    const cookieParts = [
+      `token=${token}`,
+      'Path=/',
+      'HttpOnly',
+      `Max-Age=${7 * 24 * 60 * 60}`,
+    ];
+
+    // Use SameSite=None so cookies are available when frontend and API are on different origins.
+    // Add Secure only in production.
+    cookieParts.push('SameSite=None');
+    if (process.env.NODE_ENV === 'production') {
+      cookieParts.push('Secure');
+    }
+
+    res.setHeader('Set-Cookie', cookieParts.join('; '));
 
     // Return user data (without password)
     const { passwordHash, ...userData } = user;

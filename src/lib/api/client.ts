@@ -14,11 +14,22 @@ class ApiClient {
       ...(options.headers as Record<string, string>),
     };
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Try to include credentials (cookie) first. If cookie isn't sent by browser
+    // (e.g., SameSite issues or cross-origin misconfiguration), fall back to
+    // Authorization header using a stored token.
+    const token = typeof window !== 'undefined' ? localStorage.getItem('api_token') : null;
+
+    const fetchOptions: RequestInit = {
       ...options,
       headers,
       credentials: 'include', // Include cookies for session management
-    });
+    };
+
+    if (token && !(fetchOptions.headers as Record<string, string>)['Authorization']) {
+      (fetchOptions.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Request failed' }));
